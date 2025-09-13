@@ -171,7 +171,7 @@ class BodyTracker:
 
 
 class PunchDetector:
-    """Simple punch classifier: Jab (toward camera), Hook (out then in arc), Uppercut (upwards).
+    """Simple punch classifier: Block (wrists together), Hook (out then in arc), Uppercut (upwards).
     Uses wrist motion vs. shoulder with velocity/geometry heuristics and cooldown.
     """
     def __init__(self, history_len=12, cooldown=0.8):
@@ -250,9 +250,36 @@ class PunchDetector:
         radial_back = max(w, h) * 0.07
         z_thresh = 0.07  # MediaPipe z (normalized, more negative = closer)
         up_dist = max(h * 0.12, 60)
-        elbow_y_thresh = h * 0.10  # Allowable elbow-shoulder y-difference for hook
+        # elbow_y_thresh = h * 0.10  # Allowable elbow-shoulder y-difference for hook
+        elbow_y_thresh = h * 0.18  # Relaxed: Allow greater elbow-shoulder y-difference for hook
 
         elbow_wrist_thresh = diag * 0.08  # Threshold for elbow-wrist proximity during jab
+
+        # --- Block detection: wrists close together AND close to face (nose) ---
+        wr_r = landmarks_dict.get("POSE:RIGHT_WRIST")
+        wr_l = landmarks_dict.get("POSE:LEFT_WRIST")
+        nose = landmarks_dict.get("POSE:NOSE")
+        if wr_r and wr_l and nose:
+            wx_r, wy_r = wr_r[1], wr_r[2]
+            wx_l, wy_l = wr_l[1], wr_l[2]
+            nx, ny = nose[1], nose[2]
+            wrist_dist = math.hypot(wx_r - wx_l, wy_r - wy_l)
+            block_thresh = diag * 0.10  # Tune as needed
+
+            # Both wrists must be close to the nose
+            wr_r_face_dist = math.hypot(wx_r - nx, wy_r - ny)
+            wr_l_face_dist = math.hypot(wx_l - nx, wy_l - ny)
+            face_thresh = diag * 0.13  # Tune as needed
+
+            if (
+                wrist_dist < block_thresh and
+                wr_r_face_dist < face_thresh and
+                wr_l_face_dist < face_thresh and
+                (now - min(self.last_trigger_time['RIGHT'], self.last_trigger_time['LEFT']) > self.cooldown)
+            ):
+                self.last_trigger_time['RIGHT'] = now
+                self.last_trigger_time['LEFT'] = now
+                return "Block"
 
         for side, pose_prefix in (("RIGHT", "POSE:RIGHT_"), ("LEFT", "POSE:LEFT_")):
             wr = landmarks_dict.get(pose_prefix + "WRIST")
@@ -289,20 +316,6 @@ class PunchDetector:
             rux, ruy = rx / rmag, ry / rmag
             align = (vx * rux + vy * ruy) / (speed + 1e-6)
 
-            # 1) Jab: hand comes toward camera (depth decreases -> more negative), i.e., big negative delta
-            dw, drel = self._depth_delta(traj_no_elbow)
-            if dw is not None:
-                # Prefer relative-to-shoulder depth when available
-                toward_cam = (drel if drel is not None else dw) < -z_thresh
-                # --- Elbow-wrist proximity check ---
-                elbow_close = False
-                if ex is not None and ey is not None:
-                    elbow_dist = math.hypot(wx - ex, wy - ey)
-                    elbow_close = elbow_dist < elbow_wrist_thresh
-                if speed > speed_med * 0.7 and toward_cam and align > 0.2 and elbow_close:
-                    self.last_trigger_time[side] = now
-                    return f"Jab ({'R' if side=='RIGHT' else 'L'})"
-
             # 2) Hook: arm goes out (radial increase) then back in, with noticeable angular sweep
             rs = self._radial_series(traj_no_elbow, k=5, gap=2)
             if len(rs) >= 5:
@@ -317,13 +330,25 @@ class PunchDetector:
                     elbow_shoulder_y_diff = abs(ey - sy)
                 else:
                     elbow_shoulder_y_diff = None
+
+                # --- New: Hook if wrist x passes face (nose) x ---
+                nose = landmarks_dict.get("POSE:NOSE")
+                hook_by_x = False
+                if nose:
+                    nx = nose[1]
+                    # For right: wrist x > nose x, for left: wrist x < nose x
+                    if side == "RIGHT" and wx > nx:
+                        hook_by_x = True
+                    elif side == "LEFT" and wx < nx:
+                        hook_by_x = True
+
                 if (
                     speed > speed_med
                     and out_then_in
                     and dtheta > 25.0
                     and horiz_frac > 0.5
                     and (elbow_shoulder_y_diff is not None and elbow_shoulder_y_diff < elbow_y_thresh)
-                ):
+                ) or hook_by_x:
                     self.last_trigger_time[side] = now
                     return f"Hook ({'R' if side=='RIGHT' else 'L'})"
                 
@@ -333,6 +358,7 @@ class PunchDetector:
             if speed > speed_vert and vy < 0 and vert_frac > 0.7 and (-dy_total) > up_dist:
                 self.last_trigger_time[side] = now
                 return f"Uppercut ({'R' if side=='RIGHT' else 'L'})"
+            
         return None
 
 
