@@ -118,7 +118,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app__header">
-        <h1 className="app__title">SpacetimeDB Chat</h1>
+        <h1 className="app__title">Chat Spacetime</h1>
         <div className="identity">Connected as <code>{identity.toHexString().slice(0, 8)}</code></div>
       </header>
 
