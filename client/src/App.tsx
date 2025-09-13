@@ -139,7 +139,7 @@ export default function App() {
       </section>
 
       <section className="panel panel--messages">
-        <h2 className="panel__title">Messages <span className="badge">{prettyMessages.length}</span></h2>
+        <h2 className="panel__title">Messages Hey <span className="badge">{prettyMessages.length}</span></h2>
         <ul className="messages">
           {prettyMessages.map((m, i) => (
             <li key={i} className="message">
