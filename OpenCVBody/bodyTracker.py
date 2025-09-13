@@ -250,17 +250,23 @@ class PunchDetector:
         radial_back = max(w, h) * 0.07
         z_thresh = 0.07  # MediaPipe z (normalized, more negative = closer)
         up_dist = max(h * 0.12, 60)
+        elbow_y_thresh = h * 0.10  # Allowable elbow-shoulder y-difference for hook
+
+        elbow_wrist_thresh = diag * 0.08  # Threshold for elbow-wrist proximity during jab
 
         for side, pose_prefix in (("RIGHT", "POSE:RIGHT_"), ("LEFT", "POSE:LEFT_")):
             wr = landmarks_dict.get(pose_prefix + "WRIST")
             sh = landmarks_dict.get(pose_prefix + "SHOULDER")
+            el = landmarks_dict.get(pose_prefix + "ELBOW")  # <--- Add elbow
             if not (wr and sh):
                 continue
             wx, wy = wr[1], wr[2]
             wz = wr[3] if len(wr) > 3 else None
             sx, sy = sh[1], sh[2]
             sz = sh[3] if len(sh) > 3 else None
-            self.history[side].append((now, (wx, wy, wz), (sx, sy, sz)))
+            ex, ey = (el[1], el[2]) if el else (None, None)  # <--- Elbow x, y
+
+            self.history[side].append((now, (wx, wy, wz), (sx, sy, sz), (ex, ey)))
 
             traj = self.history[side]
             if len(traj) < 5:
@@ -269,10 +275,13 @@ class PunchDetector:
             if now - self.last_trigger_time[side] < self.cooldown:
                 continue
 
-            vx, vy, _ = self._avg_velocity(traj)
+            # Only pass the first three elements (ignore elbow) to helper functions
+            traj_no_elbow = [t[:3] for t in traj]
+
+            vx, vy, _ = self._avg_velocity(traj_no_elbow)
             speed = math.hypot(vx, vy)
-            dr, _ = self._radial_change(traj)
-            dtheta = self._angular_change(traj)
+            dr, _ = self._radial_change(traj_no_elbow)
+            dtheta = self._angular_change(traj_no_elbow)
 
             # Unit radial dir
             rx, ry = (traj[-1][1][0] - traj[-1][2][0], traj[-1][1][1] - traj[-1][2][1])
@@ -281,30 +290,49 @@ class PunchDetector:
             align = (vx * rux + vy * ruy) / (speed + 1e-6)
 
             # 1) Jab: hand comes toward camera (depth decreases -> more negative), i.e., big negative delta
-            dw, drel = self._depth_delta(traj)
+            dw, drel = self._depth_delta(traj_no_elbow)
             if dw is not None:
                 # Prefer relative-to-shoulder depth when available
                 toward_cam = (drel if drel is not None else dw) < -z_thresh
-                if speed > speed_med * 0.7 and toward_cam and align > 0.2:
+                # --- Elbow-wrist proximity check ---
+                elbow_close = False
+                if ex is not None and ey is not None:
+                    elbow_dist = math.hypot(wx - ex, wy - ey)
+                    elbow_close = elbow_dist < elbow_wrist_thresh
+                if speed > speed_med * 0.7 and toward_cam and align > 0.2 and elbow_close:
                     self.last_trigger_time[side] = now
                     return f"Jab ({'R' if side=='RIGHT' else 'L'})"
 
             # 2) Hook: arm goes out (radial increase) then back in, with noticeable angular sweep
-            rs = self._radial_series(traj, k=5, gap=2)
+            rs = self._radial_series(traj_no_elbow, k=5, gap=2)
             if len(rs) >= 5:
                 out_then_in = (rs[-3] - rs[-5] > radial_thresh) and (rs[-1] - rs[-3] < -radial_back)
                 horiz_frac = abs(vx) / max(speed, 1e-6)
-                if speed > speed_med and out_then_in and dtheta > 25.0 and horiz_frac > 0.5:
+                # --- Elbow y relative to shoulder y ---
+                # Use most recent elbow and shoulder
+                _, _, _, (ex, ey) = traj[-1]
+                _, _, _, (ex0, ey0) = traj[-3]
+                _, (_, _, _), (_, sy, _), _ = traj[-1]
+                if ex is not None and ey is not None:
+                    elbow_shoulder_y_diff = abs(ey - sy)
+                else:
+                    elbow_shoulder_y_diff = None
+                if (
+                    speed > speed_med
+                    and out_then_in
+                    and dtheta > 25.0
+                    and horiz_frac > 0.5
+                    and (elbow_shoulder_y_diff is not None and elbow_shoulder_y_diff < elbow_y_thresh)
+                ):
                     self.last_trigger_time[side] = now
                     return f"Hook ({'R' if side=='RIGHT' else 'L'})"
-
+                
             # 3) Uppercut: strong vertical upward motion
             dy_total = traj[-1][1][1] - traj[-4][1][1]  # negative if up
             vert_frac = abs(vy) / max(speed, 1e-6)
             if speed > speed_vert and vy < 0 and vert_frac > 0.7 and (-dy_total) > up_dist:
                 self.last_trigger_time[side] = now
                 return f"Uppercut ({'R' if side=='RIGHT' else 'L'})"
-
         return None
 
 
