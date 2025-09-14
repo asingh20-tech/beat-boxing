@@ -318,14 +318,14 @@ export const SongSelectScreen: React.FC = () => {
                       />
 
                       {/* Text overlay kept inside the box */}
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full px-10 md:px-14 lg:px-16">
-                          <div className="flex items-center justify-between gap-4">
+                      <div className="absolute inset-0 flex items-center translate-y-2">
+                        <div className="w-full px-10 md:px-10 lg:px-16">
+                          <div className=" items-center justify-between">
                             <div className="min-w-0">
-                              <h3 className="text-white font-extrabold text-2xl leading-tight truncate drop-shadow">
+                              <h3 className="font-minecraftia text-white text-2xl leading-tight drop-shadow">
                                 {songItem.title}
                               </h3>
-                              <div className="text-cyan-300 font-mono text-sm mt-1 drop-shadow">
+                              <div className="font-minecraftia text-cyan-300 text-sm mt-1 drop-shadow">
                                 {songItem.bpm} BPM
                               </div>
                             </div>
@@ -333,10 +333,10 @@ export const SongSelectScreen: React.FC = () => {
                             <span
                               className={`shrink-0 px-3 py-1 rounded-full text-xs font-bold ${
                                 songItem.difficulty === 'Easy'
-                                  ? 'text-green-400 bg-green-400/20'
+                                  ? 'text-green-400'
                                   : songItem.difficulty === 'Medium'
-                                  ? 'text-yellow-400 bg-yellow-400/20'
-                                  : 'text-red-400 bg-red-400/20'
+                                  ? 'text-yellow-200'
+                                  : 'text-red-500'
                               }`}
                             >
                               {songItem.difficulty}
@@ -344,6 +344,7 @@ export const SongSelectScreen: React.FC = () => {
                           </div>
                         </div>
                       </div>
+
                     </div>
                   </button>
                 ))}
