@@ -207,7 +207,10 @@ export const SongSelectScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FCB900] p-8 relative">
+    <div
+      className="min-h-screen bg-cover bg-center p-8 relative"
+      style={{ backgroundImage: "url('/images/HomeBackground.jpeg')" }}
+    >
       <div className="max-w-7xl mx-auto">
         {/* Main Content */}
         <div className="flex gap-8 mb-8 relative z-10 justify-center items-start">
@@ -274,53 +277,77 @@ export const SongSelectScreen: React.FC = () => {
           )}
 
           {/* Character Selection - Hidden for now */}
-          <div className="hidden">
-            {/* (Keeping the code for future use; panel is hidden) */}
-          </div>
+          <div className="hidden">{/* reserved */}</div>
 
           {/* Song Selection - Center (no panel chrome) */}
           <div className="flex-1 max-w-2xl">
             <div className="bg-transparent border-none shadow-none">
-              <h2 className="text-2xl font-bold text-white mb-6 arcade-text">
-                SONGS {focusMode === 'song' && <span className="text-cyan-400">[FOCUSED]</span>}
-              </h2>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
+              {/* Title image */}
+              <div className="-mt-6 mb-4 transform -translate-x-32">
+                <img
+                  src="/images/SongSelection.png"
+                  alt="Song Selection"
+                  className="max-w-[900px]"
+                />
+              </div>
+
+              {/* Song list */}
+              <div className="space-y-4 max-h-[700px] overflow-y-auto">
                 {songs.map((songItem, index) => (
-                  <div
+                  <button
                     key={songItem.id}
-                    className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                      selectedSongIndex === index && focusMode === 'song'
-                        ? 'border-pink-500 bg-pink-500/20 scale-105'
-                        : song?.id === songItem.id
-                        ? 'border-cyan-400 bg-cyan-400/10'
-                        : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
-                    }`}
                     onClick={() => {
                       setSelectedSongIndex(index);
                       selectSong(songItem);
                       playPreview(songItem);
                       playNavSfx();
                     }}
+                    className="block w-full focus:outline-none"
                   >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="text-lg font-bold text-white">{songItem.title}</h3>
-                        <div className="text-cyan-400 font-mono text-sm">{songItem.bpm} BPM</div>
-                      </div>
-                      <div className={`px-3 py-1 rounded-full text-xs font-bold ${getDifficultyColor(songItem.difficulty)}`}>
-                        {songItem.difficulty}
+                    <div
+                      className={`relative w-full max-w-[900px] mx-auto transition-transform duration-150 ${
+                        selectedSongIndex === index && focusMode === 'song' ? 'scale-105' : 'scale-100'
+                      }`}
+                    >
+                      {/* Box art */}
+                      <img
+                        src="/images/Box.png"
+                        alt="Song Box"
+                        className="w-full h-[200px] object-fill select-none pointer-events-none"
+                        draggable={false}
+                      />
+
+                      {/* Text overlay kept inside the box */}
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full px-10 md:px-14 lg:px-16">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="min-w-0">
+                              <h3 className="text-white font-extrabold text-2xl leading-tight truncate drop-shadow">
+                                {songItem.title}
+                              </h3>
+                              <div className="text-cyan-300 font-mono text-sm mt-1 drop-shadow">
+                                {songItem.bpm} BPM
+                              </div>
+                            </div>
+
+                            <span
+                              className={`shrink-0 px-3 py-1 rounded-full text-xs font-bold ${
+                                songItem.difficulty === 'Easy'
+                                  ? 'text-green-400 bg-green-400/20'
+                                  : songItem.difficulty === 'Medium'
+                                  ? 'text-yellow-400 bg-yellow-400/20'
+                                  : 'text-red-400 bg-red-400/20'
+                              }`}
+                            >
+                              {songItem.difficulty}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-
-                    {selectedSongIndex === index && focusMode === 'song' && (
-                      <div className="flex items-center justify-center mt-2">
-                        <div className="w-0 h-0 border-t-4 border-b-4 border-l-6 border-transparent border-l-pink-500 animate-bounce mr-2"></div>
-                        <span className="text-pink-500 text-xs font-bold">SELECTED</span>
-                        <div className="w-0 h-0 border-t-4 border-b-4 border-r-6 border-transparent border-r-pink-500 animate-bounce ml-2"></div>
-                      </div>
-                    )}
-                  </div>
+                  </button>
                 ))}
+
                 {songs.length === 0 && (
                   <div className="p-4 rounded-lg border-2 border-gray-600 bg-gray-800/50 text-gray-300">
                     No songs found. Add folders under /public/songs and update /public/songs/index.json
