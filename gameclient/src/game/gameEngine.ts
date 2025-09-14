@@ -44,6 +44,7 @@ export class GameEngine {
   private missedHits = 0;
   private onNoteResult: ((result: { judgment: Judgment; note: Note; player: number; accuracy: number }) => void) | null = null;
   private onHealthUpdate: ((player: number, health: number, gameOver: boolean) => void) | null = null;
+  private onSongEnd: ((stats: ReturnType<GameEngine['getStats']>) => void) | null = null;
   
   constructor(canvas: HTMLCanvasElement, audioContext: AudioContext, gainNode: GainNode) {
     this.canvas = canvas;
@@ -146,7 +147,30 @@ export class GameEngine {
     
     this.audioElement.addEventListener('ended', () => {
       console.log('MusicEnd', { songId });
+      // When the music ends, end the game and report stats
+      try {
+        this.endGame();
+      } catch (e) {
+        console.warn('EndGameError', e);
+      }
     });
+  }
+
+  setSongEndCallback(callback: (stats: ReturnType<GameEngine['getStats']>) => void) {
+    this.onSongEnd = callback;
+  }
+
+  private endGame() {
+    // Stop the game loop/audio and notify listener with final stats
+    const stats = this.getStats();
+    this.stop();
+    if (this.onSongEnd) {
+      try {
+        this.onSongEnd(stats);
+      } catch (e) {
+        console.warn('onSongEnd callback failed', e);
+      }
+    }
   }
   
   setNoteResultCallback(callback: (result: { judgment: Judgment; note: Note; player: number; accuracy: number }) => void) {

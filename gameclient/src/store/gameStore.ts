@@ -47,7 +47,7 @@ export interface Gameplay {
 }
 
 export interface GameState {
-  currentScreen: 'TITLE' | 'HOME' | 'SONG_SELECT' | 'GAME' | 'HOW_TO_PLAY' | 'SETTINGS';
+  currentScreen: 'TITLE' | 'HOME' | 'SONG_SELECT' | 'GAME' | 'HOW_TO_PLAY' | 'SETTINGS' | 'RESULTS';
   song: Song | null;
   players: {
     p1: Player;
@@ -56,11 +56,21 @@ export interface GameState {
   lobby: Lobby;
   settings: Settings;
   gameplay: Gameplay;
+  // Last run results (populated when a song finishes)
+  lastResults?: {
+    totalNotes: number;
+    perfectHits: number;
+    greatHits: number;
+    goodHits: number;
+    missedHits: number;
+    accuracy: number;
+  } | null;
   netConnected?: boolean;
   netError?: string | null;
   
   // Actions
   setScreen: (screen: GameState['currentScreen']) => void;
+  setResults: (results: NonNullable<GameState['lastResults']>) => void;
   selectSong: (song: Song) => void;
   selectCharacter: (player: 1 | 2, characterId: string) => void;
   setMode: (mode: 'solo' | 'multiplayer') => void;
@@ -75,6 +85,7 @@ export interface GameState {
 
 export const useGameStore = create<GameState>((set, get) => ({
   currentScreen: 'TITLE',
+  lastResults: null,
   song: null,
   players: {
     p1: { characterId: null, ready: false },
@@ -109,6 +120,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   setScreen: (screen) => set({ currentScreen: screen }),
+
+  setResults: (results) => set({ lastResults: results }),
   
   selectSong: (song) => {
     console.log('SongSelected', { id: song.id, title: song.title, bpm: song.bpm, difficulty: song.difficulty });
