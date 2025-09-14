@@ -38,28 +38,35 @@ import { ClientConnected } from "./client_connected_reducer.ts";
 export { ClientConnected };
 import { ClientDisconnected } from "./client_disconnected_reducer.ts";
 export { ClientDisconnected };
-import { SendMessage } from "./send_message_reducer.ts";
-export { SendMessage };
-import { SetName } from "./set_name_reducer.ts";
-export { SetName };
+import { CreateLobby } from "./create_lobby_reducer.ts";
+export { CreateLobby };
+import { JoinLobby } from "./join_lobby_reducer.ts";
+export { JoinLobby };
+import { Increment } from "./increment_reducer.ts";
+export { Increment };
 
 // Import and reexport all table handle types
-import { MessageTableHandle } from "./message_table.ts";
-export { MessageTableHandle };
+import { LobbyTableHandle } from "./lobby_table.ts";
+export { LobbyTableHandle };
 import { UserTableHandle } from "./user_table.ts";
 export { UserTableHandle };
 
 // Import and reexport all types
-import { Message } from "./message_type.ts";
-export { Message };
+import { Lobby } from "./lobby_type.ts";
+export { Lobby };
 import { User } from "./user_type.ts";
 export { User };
 
 const REMOTE_MODULE = {
   tables: {
-    message: {
-      tableName: "message",
-      rowType: Message.getTypeScriptAlgebraicType(),
+    lobby: {
+      tableName: "lobby",
+      rowType: Lobby.getTypeScriptAlgebraicType(),
+      primaryKey: "code",
+      primaryKeyInfo: {
+        colName: "code",
+        colType: Lobby.getTypeScriptAlgebraicType().product.elements[0].algebraicType,
+      },
     },
     user: {
       tableName: "user",
@@ -80,13 +87,17 @@ const REMOTE_MODULE = {
       reducerName: "client_disconnected",
       argsType: ClientDisconnected.getTypeScriptAlgebraicType(),
     },
-    send_message: {
-      reducerName: "send_message",
-      argsType: SendMessage.getTypeScriptAlgebraicType(),
+    create_lobby: {
+      reducerName: "create_lobby",
+      argsType: CreateLobby.getTypeScriptAlgebraicType(),
     },
-    set_name: {
-      reducerName: "set_name",
-      argsType: SetName.getTypeScriptAlgebraicType(),
+    join_lobby: {
+      reducerName: "join_lobby",
+      argsType: JoinLobby.getTypeScriptAlgebraicType(),
+    },
+    increment: {
+      reducerName: "increment",
+      argsType: Increment.getTypeScriptAlgebraicType(),
     },
   },
   versionInfo: {
@@ -120,8 +131,9 @@ const REMOTE_MODULE = {
 export type Reducer = never
 | { name: "ClientConnected", args: ClientConnected }
 | { name: "ClientDisconnected", args: ClientDisconnected }
-| { name: "SendMessage", args: SendMessage }
-| { name: "SetName", args: SetName }
+| { name: "CreateLobby", args: CreateLobby }
+| { name: "JoinLobby", args: JoinLobby }
+| { name: "Increment", args: Increment }
 ;
 
 export class RemoteReducers {
@@ -143,49 +155,70 @@ export class RemoteReducers {
     this.connection.offReducer("client_disconnected", callback);
   }
 
-  sendMessage(text: string) {
-    const __args = { text };
+  createLobby(code: string) {
+    const __args = { code };
     let __writer = new BinaryWriter(1024);
-    SendMessage.getTypeScriptAlgebraicType().serialize(__writer, __args);
+    CreateLobby.getTypeScriptAlgebraicType().serialize(__writer, __args);
     let __argsBuffer = __writer.getBuffer();
-    this.connection.callReducer("send_message", __argsBuffer, this.setCallReducerFlags.sendMessageFlags);
+    this.connection.callReducer("create_lobby", __argsBuffer, this.setCallReducerFlags.createLobbyFlags);
   }
 
-  onSendMessage(callback: (ctx: ReducerEventContext, text: string) => void) {
-    this.connection.onReducer("send_message", callback);
+  onCreateLobby(callback: (ctx: ReducerEventContext, code: string) => void) {
+    this.connection.onReducer("create_lobby", callback);
   }
 
-  removeOnSendMessage(callback: (ctx: ReducerEventContext, text: string) => void) {
-    this.connection.offReducer("send_message", callback);
+  removeOnCreateLobby(callback: (ctx: ReducerEventContext, code: string) => void) {
+    this.connection.offReducer("create_lobby", callback);
   }
 
-  setName(name: string) {
-    const __args = { name };
+  joinLobby(code: string) {
+    const __args = { code };
     let __writer = new BinaryWriter(1024);
-    SetName.getTypeScriptAlgebraicType().serialize(__writer, __args);
+    JoinLobby.getTypeScriptAlgebraicType().serialize(__writer, __args);
     let __argsBuffer = __writer.getBuffer();
-    this.connection.callReducer("set_name", __argsBuffer, this.setCallReducerFlags.setNameFlags);
+    this.connection.callReducer("join_lobby", __argsBuffer, this.setCallReducerFlags.joinLobbyFlags);
   }
 
-  onSetName(callback: (ctx: ReducerEventContext, name: string) => void) {
-    this.connection.onReducer("set_name", callback);
+  onJoinLobby(callback: (ctx: ReducerEventContext, code: string) => void) {
+    this.connection.onReducer("join_lobby", callback);
   }
 
-  removeOnSetName(callback: (ctx: ReducerEventContext, name: string) => void) {
-    this.connection.offReducer("set_name", callback);
+  removeOnJoinLobby(callback: (ctx: ReducerEventContext, code: string) => void) {
+    this.connection.offReducer("join_lobby", callback);
+  }
+
+  increment(code: string) {
+    const __args = { code };
+    let __writer = new BinaryWriter(1024);
+    Increment.getTypeScriptAlgebraicType().serialize(__writer, __args);
+    let __argsBuffer = __writer.getBuffer();
+    this.connection.callReducer("increment", __argsBuffer, this.setCallReducerFlags.incrementFlags);
+  }
+
+  onIncrement(callback: (ctx: ReducerEventContext, code: string) => void) {
+    this.connection.onReducer("increment", callback);
+  }
+
+  removeOnIncrement(callback: (ctx: ReducerEventContext, code: string) => void) {
+    this.connection.offReducer("increment", callback);
   }
 
 }
 
 export class SetReducerFlags {
-  sendMessageFlags: CallReducerFlags = 'FullUpdate';
-  sendMessage(flags: CallReducerFlags) {
-    this.sendMessageFlags = flags;
+  createLobbyFlags: CallReducerFlags = 'FullUpdate';
+  createLobby(flags: CallReducerFlags) {
+    this.createLobbyFlags = flags;
   }
 
-  setNameFlags: CallReducerFlags = 'FullUpdate';
-  setName(flags: CallReducerFlags) {
-    this.setNameFlags = flags;
+  joinLobbyFlags: CallReducerFlags = 'FullUpdate';
+  joinLobby(flags: CallReducerFlags) {
+    this.joinLobbyFlags = flags;
+  }
+
+  incrementFlags: CallReducerFlags = 'FullUpdate';
+  increment(flags: CallReducerFlags) {
+    this.incrementFlags = flags;
   }
 
 }
@@ -193,8 +226,8 @@ export class SetReducerFlags {
 export class RemoteTables {
   constructor(private connection: DbConnectionImpl) {}
 
-  get message(): MessageTableHandle {
-    return new MessageTableHandle(this.connection.clientCache.getOrCreateTable<Message>(REMOTE_MODULE.tables.message));
+  get lobby(): LobbyTableHandle {
+    return new LobbyTableHandle(this.connection.clientCache.getOrCreateTable<Lobby>(REMOTE_MODULE.tables.lobby));
   }
 
   get user(): UserTableHandle {
