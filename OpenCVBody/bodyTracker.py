@@ -379,10 +379,10 @@ def punch_label_to_key(label):
         else:
             return 's'  # LEFT_HOOK
     if label.startswith("uppercut"):
-        if "r" in label:
-            return 'k'  # RIGHT_UPPERCUT
+        if "l" in label:
+            return 'k'  # LEFT_UPPERCUT
         else:
-            return 'd'  # LEFT_UPPERCUT
+            return 'd'  # RIGHT_UPPERCUT
     return None
 
 def _demo():
