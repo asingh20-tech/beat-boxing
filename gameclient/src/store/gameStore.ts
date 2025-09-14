@@ -113,6 +113,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   selectSong: (song) => {
     console.log('SongSelected', { id: song.id, title: song.title, bpm: song.bpm, difficulty: song.difficulty });
     set({ song });
+    // Persist song to lobby if in multiplayer
+    const st = get();
+    const conn = getConn();
+    if (st.lobby.mode !== 'solo' && st.lobby.code && conn) {
+      try { LobbyApi.setSong(conn, st.lobby.code, song.id); } catch (e) { console.warn('setSong failed', e); }
+    }
   },
   
   selectCharacter: (player, characterId) => {
@@ -126,6 +132,13 @@ export const useGameStore = create<GameState>((set, get) => ({
         },
       },
     }));
+    // Persist local player's character to server
+    const st = get();
+    const conn = getConn();
+    const localPlayer = st.lobby.side === 'blue' ? 2 : 1;
+    if (st.lobby.mode !== 'solo' && player === localPlayer && st.lobby.code && conn) {
+      try { LobbyApi.setCharacter(conn, st.lobby.code, characterId); } catch (e) { console.warn('setCharacter failed', e); }
+    }
   },
   
   setMode: (mode) => {
@@ -161,11 +174,18 @@ export const useGameStore = create<GameState>((set, get) => ({
   const doCreate = (c: any) => { try { LobbyApi.create(c, code); } catch (e) { console.warn('Create reducer failed', e); } };
     if (conn && get().netConnected) {
       doCreate(conn);
+      // If a song is already selected locally, persist it immediately
+      const s = get().song;
+      if (s) { try { LobbyApi.setSong(conn, code, s.id); } catch (e) { console.warn('setSong (host immediate) failed', e); } }
     } else {
       const saved = localStorage.getItem('auth_token') || undefined;
       void connectSpacetime(saved).then((st) => {
         set({ netConnected: st.connected, netError: st.error });
-        if (st.conn && st.connected) doCreate(st.conn);
+        if (st.conn && st.connected) {
+          doCreate(st.conn);
+          const s = get().song;
+          if (s) { try { LobbyApi.setSong(st.conn, code, s.id); } catch (e) { console.warn('setSong (host connect) failed', e); } }
+        }
       });
     }
   set((state) => ({
@@ -192,6 +212,37 @@ export const useGameStore = create<GameState>((set, get) => ({
           p2Ready: row?.blue_ready ?? state.lobby.p2Ready,
         }
       }));
+      // If server says started, ensure we're on GAME screen
+      if (row?.started) {
+        if (get().currentScreen !== 'GAME') {
+          set({ currentScreen: 'GAME' });
+        }
+      }
+      // If we're the host and row has no song_id yet, push our current song
+      if (get().lobby.side === 'red' && row) {
+        const localSongId = get().song?.id;
+        const remoteSongId = row.song_id ?? null;
+        if (localSongId && !remoteSongId) {
+          const c = getConn();
+          if (c && get().lobby.code) {
+            try { LobbyApi.setSong(c, get().lobby.code!, localSongId); } catch (e) { console.warn('setSong (host sync) failed', e); }
+          }
+        }
+      }
+      // Mirror opponent character and scores if present
+      if (row) {
+        set((state) => ({
+          players: {
+            p1: { ...state.players.p1, characterId: state.lobby.side === 'blue' ? (row.red_char ?? state.players.p1.characterId) : state.players.p1.characterId },
+            p2: { ...state.players.p2, characterId: state.lobby.side !== 'blue' ? (row.blue_char ?? state.players.p2.characterId) : state.players.p2.characterId },
+          },
+          gameplay: {
+            ...state.gameplay,
+            scoreP1: row.red_score ?? state.gameplay.scoreP1,
+            scoreP2: row.blue_score ?? state.gameplay.scoreP2,
+          }
+        }));
+      }
     });
   // store unsubscribe to clean up on reset
   lobbyUnsub?.();
@@ -236,6 +287,24 @@ export const useGameStore = create<GameState>((set, get) => ({
   p2Ready: row?.blue_ready ?? state.lobby.p2Ready,
         }
       }));
+      if (row?.started) {
+        if (get().currentScreen !== 'GAME') {
+          set({ currentScreen: 'GAME' });
+        }
+      }
+      if (row) {
+        set((state) => ({
+          players: {
+            p1: { ...state.players.p1, characterId: state.lobby.side === 'blue' ? (row.red_char ?? state.players.p1.characterId) : state.players.p1.characterId },
+            p2: { ...state.players.p2, characterId: state.lobby.side !== 'blue' ? (row.blue_char ?? state.players.p2.characterId) : state.players.p2.characterId },
+          },
+          gameplay: {
+            ...state.gameplay,
+            scoreP1: row.red_score ?? state.gameplay.scoreP1,
+            scoreP2: row.blue_score ?? state.gameplay.scoreP2,
+          }
+        }));
+      }
     });
   lobbyUnsub?.();
   lobbyUnsub = unsub;
@@ -260,7 +329,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Auto-start when both ready and song chosen
     const bothReady = get().lobby.p1Ready && get().lobby.p2Ready;
     if (bothReady && get().song) {
-      get().startMatch();
+      const code = get().lobby.code;
+      const conn2 = getConn();
+      if (code && conn2) {
+        try { LobbyApi.startMatch(conn2, code); } catch (e) { console.warn('startMatch reducer failed', e); }
+      } else {
+        // fallback: local start
+        get().startMatch();
+      }
     }
   },
   

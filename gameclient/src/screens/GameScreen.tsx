@@ -4,6 +4,7 @@ import { GameEngine, Note, Judgment } from '../game/gameEngine';
 import { InputHandler, InputEvent } from '../game/inputHandler';
 import { CharacterSpriteManager } from '../game/characterSprites';
 import { NeonButton } from '../components/ui/NeonButton';
+import { getConn, LobbyApi } from '../lib/spacetime';
 
 declare global {
   interface Window {
@@ -73,7 +74,14 @@ export const GameScreen: React.FC = () => {
       [`comboP${player}`]: newCombo,
       [`accuracyP${player}`]: result.accuracy,
     });
-  }, [updateGameplay]);
+    // Push my score to server so opponent sees it live
+    const conn = getConn();
+    const code = lobby.code;
+    const localPlayer = lobby.side === 'blue' ? 2 : 1;
+    if (conn && code && player === localPlayer) {
+      try { LobbyApi.setScore(conn, code, newScore); } catch (e) { console.warn('setScore failed', e); }
+    }
+  }, [updateGameplay, lobby.code, lobby.side]);
 
   const handleHealthUpdate = useCallback((player: number, healthChange: number, gameOver: boolean) => {
     // Read latest health from refs to ensure multiple rapid updates apply correctly
@@ -94,7 +102,14 @@ export const GameScreen: React.FC = () => {
   const handleInput = useCallback((inputEvent: InputEvent) => {
     if (isPaused || !gameEngineRef.current || !characterManagerRef.current) return;
 
-    const result = gameEngineRef.current.handleInput(inputEvent.lane, inputEvent.type, inputEvent.player);
+    // Map input types from inputHandler to engine types
+    const engineType: 'jab' | 'punch' | 'hook' =
+      inputEvent.type === 'block' ? 'jab' : inputEvent.type === 'uppercut' ? 'punch' : 'hook';
+
+    // Local player id based on side
+    const localPlayer = lobby.side === 'blue' ? 2 : 1;
+
+    const result = gameEngineRef.current.handleInput(inputEvent.lane, engineType, localPlayer);
 
     if (result.judgment) {
       console.log('NoteHit', {
@@ -108,8 +123,13 @@ export const GameScreen: React.FC = () => {
     }
 
     // Trigger character animation
-    characterManagerRef.current.triggerAction(inputEvent.player, inputEvent.action);
-  }, [isPaused]);
+    // Map BLOCK action to LEFT/RIGHT_BLOCK
+    const action: 'LEFT_BLOCK' | 'LEFT_UPPERCUT' | 'LEFT_HOOK' | 'RIGHT_BLOCK' | 'RIGHT_UPPERCUT' | 'RIGHT_HOOK' =
+      inputEvent.action === 'BLOCK'
+        ? (inputEvent.lane === 'L' ? 'LEFT_BLOCK' : 'RIGHT_BLOCK')
+        : (inputEvent.action as 'LEFT_UPPERCUT' | 'LEFT_HOOK' | 'RIGHT_UPPERCUT' | 'RIGHT_HOOK');
+    characterManagerRef.current.triggerAction(localPlayer, action);
+  }, [isPaused, lobby.side]);
   
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -158,7 +178,7 @@ export const GameScreen: React.FC = () => {
     
   document.addEventListener('keydown', handlePause);
     
-    // Start game
+    // Start game only when song exists; engine can start immediately since navigation is synchronized by store
   gameEngineRef.current.start(song?.id);
     
     return () => {
@@ -300,10 +320,8 @@ export const GameScreen: React.FC = () => {
       <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
         <div className="flex items-center space-x-6 bg-gray-900/90 rounded-full px-6 py-3 border-2 border-cyan-400/50">
           <div className="text-center">
-            <div className="text-cyan-400 text-sm">SCORE</div>
-            <div className="text-white font-bold text-lg">
-              {(gameplay.scoreP1 + gameplay.scoreP2).toLocaleString()}
-            </div>
+            <div className="text-pink-400 text-xs">P1</div>
+            <div className="text-white font-bold text-lg">{gameplay.scoreP1.toLocaleString()}</div>
           </div>
           <div className="w-px h-8 bg-white/20"></div>
           <div className="text-center">
@@ -314,10 +332,8 @@ export const GameScreen: React.FC = () => {
           </div>
           <div className="w-px h-8 bg-white/20"></div>
           <div className="text-center">
-            <div className="text-pink-400 text-sm">ACCURACY</div>
-            <div className="text-white font-bold text-lg">
-              {((gameplay.accuracyP1 + gameplay.accuracyP2) / 2).toFixed(1)}%
-            </div>
+            <div className="text-cyan-400 text-xs">P2</div>
+            <div className="text-white font-bold text-lg">{gameplay.scoreP2.toLocaleString()}</div>
           </div>
         </div>
       </div>

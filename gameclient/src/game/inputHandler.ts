@@ -1,7 +1,7 @@
 export type InputAction = 'BLOCK' | 'LEFT_UPPERCUT' | 'LEFT_HOOK' | 'RIGHT_UPPERCUT' | 'RIGHT_HOOK';
 
 export interface InputEvent {
-  player: 1;
+  player: 1 | 2;
   action: InputAction;
   timestamp: number;
   lane: 'L' | 'R';
@@ -53,6 +53,18 @@ export class InputHandler {
         return { player: 1, action: 'RIGHT_UPPERCUT', timestamp, lane: 'R', type: 'uppercut' };
       case 'l':
         return { player: 1, action: 'RIGHT_HOOK', timestamp, lane: 'R', type: 'hook' };
+      // Player 2 bindings (arrows)
+      case 'arrowleft':
+        return { player: 2, action: 'BLOCK', timestamp, lane: 'L', type: 'block' };
+      case 'arrowup':
+        return { player: 2, action: 'LEFT_UPPERCUT', timestamp, lane: 'L', type: 'uppercut' };
+      case 'arrowdown':
+        return { player: 2, action: 'LEFT_HOOK', timestamp, lane: 'L', type: 'hook' };
+      case 'arrowright':
+        return { player: 2, action: 'RIGHT_UPPERCUT', timestamp, lane: 'R', type: 'uppercut' };
+      case 'pagedown': // PgDn as right hook
+      case 'end': // End as alternative
+        return { player: 2, action: 'RIGHT_HOOK', timestamp, lane: 'R', type: 'hook' };
       default:
         return null;
     }
