@@ -366,13 +366,13 @@ export const GameScreen: React.FC = () => {
           <CharacterPanel player={1} />
         </div>
         
-        {/* Game Canvas - Condensed */}
-        <div className="flex-shrink-0">
+    {/* Game Canvas - Larger focus */}
+    <div className="flex-shrink-0 mx-4">
           <canvas
             ref={canvasRef}
-            width={400}
-            height={500}
-            className="border-2 border-cyan-400/50 rounded-lg shadow-2xl shadow-cyan-400/20 bg-black/20"
+      width={700}
+      height={800}
+      className="border-4 border-cyan-400/60 rounded-xl shadow-2xl shadow-cyan-400/30 bg-black/30"
             style={{ imageRendering: 'pixelated' }}
           />
         </div>

@@ -26,11 +26,11 @@ export class GameEngine {
   
   // Game constants
   private readonly NOTE_SPEED = 150; // pixels per second
-  private readonly HIT_LINE_Y = 400;
-  private readonly LANE_L_X = 150;
-  private readonly LANE_R_X = 250;
-  private readonly NOTE_SIZE = 25;
-  private readonly NOTE_ICON_SIZE = 48;
+  // Layout metrics (computed from canvas size)
+  private hitLineY = 400;
+  private laneLX = 150;
+  private laneRX = 250;
+  private noteIconSize = 48;
   
   // Judgment timing windows (ms) - much tighter
   private readonly PERFECT_WINDOW = 20;
@@ -59,6 +59,7 @@ export class GameEngine {
     this.ctx = canvas.getContext('2d')!;
     this.audioContext = audioContext;
     this.gainNode = gainNode;
+    this.updateLayoutMetrics();
     // Removed procedural chart; notes will be loaded from .chart files
   // Preload motion icons
   this.icons.block.src = '/images/block.png';
@@ -67,6 +68,24 @@ export class GameEngine {
   this.icons.hookR.src = '/images/righthook.png';
     // Touch optional callbacks to avoid TS noUnusedLocals complaints
     this._touchOptionalCallbacks();
+  }
+
+  private lastCanvasW = 0;
+  private lastCanvasH = 0;
+  private updateLayoutMetrics() {
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    this.lastCanvasW = w;
+    this.lastCanvasH = h;
+    // Hit line at ~80% down the canvas
+    this.hitLineY = Math.floor(h * 0.8);
+    // Lanes centered with a comfortable gap
+    const centerX = Math.floor(w / 2);
+    const gap = Math.max(140, Math.floor(w * 0.18));
+    this.laneLX = centerX - Math.floor(gap / 2);
+    this.laneRX = centerX + Math.floor(gap / 2);
+    // Scale note sizes with canvas height
+  this.noteIconSize = Math.max(40, Math.floor(h * 0.08));
   }
 
   private _touchOptionalCallbacks() {
@@ -114,7 +133,7 @@ export class GameEngine {
         lane: Math.random() < 0.5 ? 'L' : 'R',
         type: (m.move as Note['type']),
         time: m.ms,
-        y: -this.NOTE_SIZE,
+        y: -this.noteIconSize,
         hit: false,
       }));
 
@@ -206,15 +225,19 @@ export class GameEngine {
   
   private update() {
     this.currentTime = performance.now() - this.startTime;
+    // Recompute layout if canvas size changed
+    if (this.canvas.width !== this.lastCanvasW || this.canvas.height !== this.lastCanvasH) {
+      this.updateLayoutMetrics();
+    }
     
     // Update note positions (top to bottom)
     this.notes.forEach(note => {
       if (!note.hit) {
         const timeUntilHit = note.time - this.currentTime;
-        note.y = this.HIT_LINE_Y - (timeUntilHit * this.NOTE_SPEED / 1000);
+        note.y = this.hitLineY - (timeUntilHit * this.NOTE_SPEED / 1000);
         
         // Mark as missed if too far past hit line and count it
-        if (note.y > this.HIT_LINE_Y + 100 && !note.hit) {
+        if (note.y > this.hitLineY + this.noteIconSize * 2 && !note.hit) {
           note.hit = true;
           this.missedHits++;
           const accuracy = this.calculateAccuracy();
@@ -222,7 +245,7 @@ export class GameEngine {
           console.log('NoteMiss', { 
             player: 1, // Default to player 1 for auto-misses
             lane: note.lane, 
-            deltaMs: Math.abs(note.y - this.HIT_LINE_Y) * 1000 / this.NOTE_SPEED
+            deltaMs: Math.abs(note.y - this.hitLineY) * 1000 / this.NOTE_SPEED
           });
           console.log('AccuracyUpdated', { 
             player: 1, 
@@ -251,33 +274,33 @@ export class GameEngine {
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Draw lanes (vertical)
-    this.drawLane(this.LANE_L_X);
-    this.drawLane(this.LANE_R_X);
+    this.drawLane(this.laneLX);
+    this.drawLane(this.laneRX);
     
     // Draw hit line (horizontal)
     this.ctx.strokeStyle = '#00ffff';
-    this.ctx.lineWidth = 4;
+    this.ctx.lineWidth = 5;
     this.ctx.shadowColor = '#00ffff';
-    this.ctx.shadowBlur = 10;
+    this.ctx.shadowBlur = 12;
     this.ctx.beginPath();
-    this.ctx.moveTo(100, this.HIT_LINE_Y);
-    this.ctx.lineTo(300, this.HIT_LINE_Y);
+    this.ctx.moveTo(this.laneLX - 60, this.hitLineY);
+    this.ctx.lineTo(this.laneRX + 60, this.hitLineY);
     this.ctx.stroke();
     this.ctx.shadowBlur = 0;
     
     // Draw notes
     this.notes.forEach(note => {
-      if (!note.hit && note.y > -this.NOTE_SIZE && note.y < this.canvas.height + this.NOTE_SIZE) {
+      if (!note.hit && note.y > -this.noteIconSize && note.y < this.canvas.height + this.noteIconSize) {
         this.drawNote(note);
       }
     });
     
     // Draw lane indicators
     this.ctx.fillStyle = '#ffffff80';
-    this.ctx.font = 'bold 16px monospace';
+    this.ctx.font = 'bold 18px monospace';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('L', this.LANE_L_X, 30);
-    this.ctx.fillText('R', this.LANE_R_X, 30);
+    this.ctx.fillText('L', this.laneLX, 30);
+    this.ctx.fillText('R', this.laneRX, 30);
     
     // Draw accuracy info
     this.ctx.fillStyle = '#ffffff60';
@@ -289,7 +312,7 @@ export class GameEngine {
   private drawLane(x: number) {
     // Draw lane guide line
     this.ctx.strokeStyle = '#333333';
-    this.ctx.lineWidth = 2;
+    this.ctx.lineWidth = 3;
     this.ctx.setLineDash([5, 5]);
     this.ctx.beginPath();
     this.ctx.moveTo(x, 50);
@@ -299,7 +322,7 @@ export class GameEngine {
   }
   
   private drawNote(note: Note) {
-    const x = note.lane === 'L' ? this.LANE_L_X : this.LANE_R_X;
+    const x = note.lane === 'L' ? this.laneLX : this.laneRX;
     // Pick icon based on note type and lane (left/right hook variants)
     let img: HTMLImageElement;
     if (note.type === 'block') {
@@ -310,8 +333,8 @@ export class GameEngine {
       img = note.lane === 'L' ? this.icons.hookL : this.icons.hookR;
     }
 
-    const w = this.NOTE_ICON_SIZE;
-    const h = this.NOTE_ICON_SIZE;
+  const w = this.noteIconSize;
+  const h = this.noteIconSize;
     const dx = x - w / 2;
     const dy = note.y - h / 2;
     if (img && img.complete && img.naturalWidth > 0) {
@@ -325,17 +348,18 @@ export class GameEngine {
   
   handleInput(lane: 'L' | 'R', inputType: 'block' | 'uppercut' | 'hook', player: number): { judgment: Judgment | null; note: Note | null; accuracy: number } {
     // Find the closest unhit note in the specified lane that matches the input type
+    const windowPx = Math.max(60, this.noteIconSize * 1.6);
     const laneNotes = this.notes.filter(note => 
       note.lane === lane && 
       !note.hit && 
-      Math.abs(note.y - this.HIT_LINE_Y) < 80 // Tighter hit window
+      Math.abs(note.y - this.hitLineY) < windowPx
     );
     
     if (laneNotes.length === 0) {
       // No hittable note in this lane at the hit window.
       // Check if there's a note in the other lane within the timing window (wrong movement/hand).
       const otherLaneNotes = this.notes.filter(n =>
-        n.lane !== lane && !n.hit && Math.abs(n.y - this.HIT_LINE_Y) < 80
+        n.lane !== lane && !n.hit && Math.abs(n.y - this.hitLineY) < windowPx
       );
 
       this.missedHits++;
@@ -360,12 +384,12 @@ export class GameEngine {
     
     // Get the closest note
     const closestNote = laneNotes.reduce((closest, note) => {
-      const closestDistance = Math.abs(closest.y - this.HIT_LINE_Y);
-      const noteDistance = Math.abs(note.y - this.HIT_LINE_Y);
+  const closestDistance = Math.abs(closest.y - this.hitLineY);
+  const noteDistance = Math.abs(note.y - this.hitLineY);
       return noteDistance < closestDistance ? note : closest;
     });
     
-    const timingError = Math.abs(closestNote.y - this.HIT_LINE_Y);
+  const timingError = Math.abs(closestNote.y - this.hitLineY);
     const deltaMs = (timingError / this.NOTE_SPEED) * 1000; // Convert to milliseconds
 
     closestNote.hit = true;
