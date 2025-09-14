@@ -247,7 +247,7 @@ export const GameScreen: React.FC = () => {
           )}
           {/* Graffiti tag */}
              <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded transform rotate-12">
-               {pose === 'jab' ? 'BLOCK' : pose === 'punch' ? 'UPPERCUT' : pose.toUpperCase()}
+               {pose === 'block' ? 'BLOCK' : pose === 'uppercut' ? 'UPPERCUT' : pose.toUpperCase()}
           </div>
         </div>
         

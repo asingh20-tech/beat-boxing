@@ -1,4 +1,4 @@
-export type CharacterPose = 'idle' | 'jab' | 'punch' | 'hook';
+export type CharacterPose = 'idle' | 'block' | 'uppercut' | 'hook';
 
 export interface CharacterState {
   characterId: string;
@@ -23,17 +23,19 @@ export class CharacterSpriteManager {
   triggerAction(player: 1 | 2, action: 'LEFT_BLOCK' | 'LEFT_UPPERCUT' | 'LEFT_HOOK' | 'RIGHT_BLOCK' | 'RIGHT_UPPERCUT' | 'RIGHT_HOOK') {
     const state = player === 1 ? this.player1State : this.player2State;
     
-    // Map BLOCK to jab pose (reuse visuals), UPPERCUT to punch pose, HOOK stays hook
+    // Map incoming actions to pose names. We keep 'hook' the same.
     if (action.includes('BLOCK')) {
-      state.currentPose = 'jab';
+      state.currentPose = 'block';
     } else if (action.includes('UPPERCUT')) {
-      state.currentPose = 'punch';
+      state.currentPose = 'uppercut';
     } else if (action.includes('HOOK')) {
       state.currentPose = 'hook';
     } else if (action.includes('JAB')) {
-      state.currentPose = 'jab';
+      // Legacy action string
+      state.currentPose = 'block';
     } else if (action.includes('PUNCH')) {
-      state.currentPose = 'punch';
+      // Legacy action string
+      state.currentPose = 'uppercut';
     }
     
     state.poseTimer = this.POSE_DURATION;

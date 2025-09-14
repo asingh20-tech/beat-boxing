@@ -53,7 +53,8 @@ export interface Chart {
 }
 
 // Align move names with the game engine
-export type MoveType = "jab" | "punch" | "hook";
+// Emit the engine-native move names so consumers don't need to remap legacy names.
+export type MoveType = "block" | "uppercut" | "hook";
 export interface MoveHit {
   ms: number;
   move: MoveType;
@@ -432,7 +433,8 @@ export const toMoves = (
   for (const n of list) {
     const hitLanes = [0, 1, 2].filter((i) => n.notes[i]);
     for (const lane of hitLanes) {
-      const move: MoveType = lane === 0 ? "jab" : lane === 1 ? "punch" : "hook";
+      // Map chart lanes to engine moves: 0 -> block, 1 -> uppercut, 2 -> hook
+      const move: MoveType = lane === 0 ? "block" : lane === 1 ? "uppercut" : "hook";
       const duration = n.duration[lane] || 0;
       out.push({
         ms: n.ms,
