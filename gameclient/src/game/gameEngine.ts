@@ -108,15 +108,11 @@ export class GameEngine {
       const { parseChartToMoves } = await import('../lib/chartParser');
       const moves = parseChartToMoves(text, difficulty);
 
-  const laneMap: Record<number, 'L' | 'R'> = { 0: 'L', 1: 'R', 2: 'R' };
-  // Chart parser may emit legacy move names like 'jab'/'punch'/'hook'. Map them to the
-  // engine's input types: 'block' | 'uppercut' | 'hook'.
-  const typeFromMove: Record<string, Note['type']> = { jab: 'block', punch: 'uppercut', hook: 'hook' };
-
+      // Use engine-native move names from chart and randomize lanes for variety
       this.notes = moves.map((m, idx) => ({
         id: `note-${idx}-${m.rawPoint}`,
-        lane: laneMap[m.laneIndex] ?? 'L',
-  type: typeFromMove[m.move] ?? 'block',
+        lane: Math.random() < 0.5 ? 'L' : 'R',
+        type: (m.move as Note['type']),
         time: m.ms,
         y: -this.NOTE_SIZE,
         hit: false,

@@ -426,7 +426,7 @@ export const GameScreen: React.FC = () => {
       {/* Instructions */}
       <div className="absolute top-4 right-4 text-right text-gray-400 text-sm">
         <div>ESC = Pause</div>
-  <div>Match note types: Circle=Block, Square=Uppercut, Diamond=Hook</div>
+        <div>Match note types: Block, Uppercut, Hook (left/right)</div>
         <div>P1: F/D/S (Left), J/K/L (Right)</div>
         {lobby.connectedP2 && <div>P2: Arrows + End/PgDn</div>}
       </div>
