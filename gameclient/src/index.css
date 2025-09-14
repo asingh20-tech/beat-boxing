@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Creepster&display=swap');
+
+/* Brick wall background */
+.brick-wall {
+  background-image: 
+    linear-gradient(335deg, #b91c1c 23px, transparent 23px),
+    linear-gradient(155deg, #b91c1c 23px, transparent 23px),
+    linear-gradient(335deg, #dc2626 23px, transparent 23px),
+    linear-gradient(155deg, #dc2626 23px, transparent 23px);
+  background-size: 58px 58px;
+  background-position: 0px 2px, 4px 35px, 29px 31px, 34px 6px;
+  background-color: #7f1d1d;
+}
+
+/* Graffiti text effects */
+.graffiti-text {
+  font-family: 'Creepster', cursive;
+  text-shadow: 3px 3px 0px rgba(0,0,0,0.8);
+}
+
+.arcade-text {
+  font-family: 'Orbitron', monospace;
+  text-shadow: 2px 2px 0px rgba(0,0,0,0.8);
+}
+
+/* Spray paint drip effect */
+.spray-drip::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  width: 4px;
+  height: 20px;
+  background: linear-gradient(to bottom, currentColor, transparent);
+  transform: translateX(-50%);
+  border-radius: 2px;
+}
