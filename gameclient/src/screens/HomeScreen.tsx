@@ -1,3 +1,4 @@
+// HomeScreen.tsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { playNavSfx, playSelectSfx } from '../lib/sfx';
 import { useGameStore } from '../store/gameStore';
@@ -13,12 +14,12 @@ export const HomeScreen: React.FC = () => {
     { label: 'SINGLE PLAYER',
       imgDefault: '/images/FreeplayB.PNG',
       imgFocused: '/images/FreeplayW.PNG',
-  action: () => { setMode('solo'); setScreen('SONG_SELECT'); }
+      action: () => { setMode('solo'); setScreen('SONG_SELECT'); }
     },
     { label: 'MULTIPLAYER',
       imgDefault: '/images/VersusB.PNG',
       imgFocused: '/images/VersusW.PNG',
-  action: () => { setMode('multiplayer'); setScreen('SONG_SELECT'); }
+      action: () => { setMode('multiplayer'); setScreen('SONG_SELECT'); }
     },
     { label: 'HOW TO PLAY',
       imgDefault: '/images/HowToPlayB.PNG',
@@ -32,7 +33,6 @@ export const HomeScreen: React.FC = () => {
     },
   ], [setMode, setScreen]);
 
-  // Arrow key navigation + select
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       switch (event.key) {
@@ -60,27 +60,41 @@ export const HomeScreen: React.FC = () => {
           break;
       }
     };
-//comment
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedIndex, menuItems]);
 
-  // Keep selected item centered
   useEffect(() => {
     const el = itemRefs.current[selectedIndex];
     if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [selectedIndex]);
 
-  // Center initial selection on mount
   useEffect(() => {
     const el = itemRefs.current[0];
     if (el) el.scrollIntoView({ block: 'center' });
   }, []);
 
+  // Parallax: invert direction by negating the previous offset.
+  const mid = (menuItems.length - 1) / 2;
+  const MAX_SHIFT = 50; // px of max vertical movement
+  const bgOffsetY = Math.max(-MAX_SHIFT, Math.min(MAX_SHIFT, (selectedIndex - mid) * 20));
+  const invertedOffset = -bgOffsetY; // <-- invert!
+
   return (
-    <div className="min-h-screen bg-[#FCB900] flex flex-col items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
+      {/* Background image layer (zoomed to avoid edge cutoffs) */}
+      <img
+        src="/images/HomeBackground.jpeg"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 -z-10 w-full h-full object-cover will-change-transform transition-transform duration-500 ease-out"
+        style={{
+          // slight zoom so vertical movement never shows empty space
+          transform: `translateY(${invertedOffset}px) scale(1.12)`,
+        }}
+      />
+
       <div className="text-center z-10 w-full">
-        {/* Scrollable, snap-to-center list with padding/spacers to avoid cropping */}
         <div
           ref={containerRef}
           className="space-y-8 h-screen overflow-y-auto scroll-smooth snap-y snap-mandatory px-4 py-[25vh]"
@@ -112,7 +126,6 @@ export const HomeScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Decorative elements */}
       <div className="absolute bottom-10 left-10 text-cyan-400/80 arcade-text text-sm font-bold space-y-1">
         <div>[↑↓ TO NAVIGATE]</div>
         <div>[ENTER TO SELECT]</div>
