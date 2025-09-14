@@ -1,4 +1,11 @@
 [
+{
+    "id": "tossieSlide - Drake",
+    "title": "Tossie Slide - Drake",
+    "bpm": 140,
+    "difficulty": "Medium"
+  },
+
   {
     "id": "hello",
     "title": "Hello Waves",
@@ -8,7 +15,7 @@
   {
     "id": "Marrow - Meshuggah",
     "title": "Marrow - Meshuggah",
-    "bpm": 120,
+    "bpm": 240,
     "difficulty": "Hard"
   }
 ]

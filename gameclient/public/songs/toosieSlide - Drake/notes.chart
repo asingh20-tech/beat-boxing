@@ -1,0 +1,95 @@
+# Generate a super-simple Clone Hero/Guitar Hero .chart file for "Toosie Slide (Easy)"
+# Uses constant 82 BPM in 4/4, Resolution 192, with easy quarter-note beats that alternate between two lanes.
+# You can tweak BPM or add an audio offset later if needed.
+
+import math
+from datetime import datetime
+
+name = "Toosie Slide (Easy)"
+artist = "Drake"
+genre = "hip-hop"
+resolution = 192  # pulses per quarter note
+bpm = 82.0
+us_per_beat = round(60_000_000 / bpm)  # microseconds per beat, integer for B lines
+beats_per_measure = 4
+measures = 84  # ~4:07 at 82 BPM ≈ 336 beats (84 bars of 4/4)
+
+total_beats = measures * beats_per_measure
+total_ticks = int(total_beats * resolution)
+
+def chart_header():
+    return (
+        "[Song]\n"
+        "{\n"
+        f"  Name = \"{name}\"\n"
+        f"  Artist = \"{artist}\"\n"
+        f"  Charter = \"Sejal (BeatBoxing)\"\n"
+        f"  Offset = 0\n"
+        f"  Resolution = {resolution}\n"
+        f"  Player2 = bass\n"
+        f"  Difficulty = 0\n"
+        f"  PreviewStart = 0\n"
+        f"  PreviewEnd = 0\n"
+        f"  Genre = \"{genre}\"\n"
+        f"  MediaType = \"cd\"\n"
+        f"  MusicStream = \"toosie_slide.ogg\"\n"
+        "}\n"
+    )
+
+def chart_synctrack():
+    # Constant tempo, 4/4
+    return (
+        "[SyncTrack]\n"
+        "{\n"
+        f"  0 = TS 4\n"
+        f"  0 = B {us_per_beat}\n"
+        "}\n"
+    )
+
+def chart_events():
+    ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    return (
+        "[Events]\n"
+        "{\n"
+        f"  0 = E \"song_start_generated_{ts}\"\n"
+        "}\n"
+    )
+
+def chart_easy_single():
+    # Alternating between lanes 0 and 1 on every quarter note; no sustains, super easy.
+    lines = ["[EasySingle]", "{"]
+    tick = 0
+    note_a, note_b = 0, 1  # two-lane alternation
+    for beat in range(total_beats):
+        lane = note_a if (beat % 2 == 0) else note_b
+        lines.append(f"  {tick} = N {lane} 0")
+        tick += resolution  # next quarter note
+
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+def chart_expert_single_copy():
+    # Duplicate the easy pattern into ExpertSingle so importers that only read Expert have something to show.
+    lines = ["[ExpertSingle]", "{"]
+    tick = 0
+    note_a, note_b = 0, 1
+    for beat in range(total_beats):
+        lane = note_a if (beat % 2 == 0) else note_b
+        lines.append(f"  {tick} = N {lane} 0")
+        tick += resolution
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+chart_text = (
+    chart_header()
+    + chart_synctrack()
+    + chart_events()
+    + chart_easy_single()
+    + chart_expert_single_copy()
+)
+
+path = "/mnt/data/Toosie_Slide_Easy.chart"
+with open(path, "w", encoding="utf-8") as f:
+    f.write(chart_text)
+
+path
