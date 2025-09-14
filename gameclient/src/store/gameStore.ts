@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { connectSpacetime, getConn, getIdentity, LobbyApi, subscribeLobby } from '../lib/spacetime';
+import { connectSpacetime, getConn, LobbyApi, subscribeLobby } from '../lib/spacetime';
 
 let lobbyUnsub: (() => void) | null = null;
 
@@ -186,12 +186,8 @@ export const useGameStore = create<GameState>((set, get) => ({
           connectedP2: !!row?.red && !!row?.blue,
           redPresent: !!row?.red,
           bluePresent: !!row?.blue,
-          // if we're hosting and the server moved us to blue for some reason, follow it
-          side: (() => {
-            const id = getIdentity();
-            if (!row || !id) return state.lobby.side;
-            return (row.red && row.red === id) ? 'red' : (row.blue && row.blue === id) ? 'blue' : state.lobby.side;
-          })(),
+          // host stays red; we don't flip sides here
+          side: state.lobby.side,
         }
       }));
     });
@@ -222,8 +218,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         connectedP2: false,
         p1Ready: false,
         p2Ready: false,
-    // tentative until subscription tells us which slot we are
-    side: undefined,
+  side: 'blue',
       },
     }));
   const unsub = subscribeLobby(code, (row) => {
@@ -233,11 +228,8 @@ export const useGameStore = create<GameState>((set, get) => ({
           connectedP2: !!row?.red && !!row?.blue,
           redPresent: !!row?.red,
           bluePresent: !!row?.blue,
-          side: (() => {
-            const id = getIdentity();
-            if (!row || !id) return state.lobby.side;
-            return (row.red && row.red === id) ? 'red' : (row.blue && row.blue === id) ? 'blue' : state.lobby.side;
-          })(),
+      // joiner stays blue; we don't flip sides here
+      side: state.lobby.side,
         }
       }));
     });

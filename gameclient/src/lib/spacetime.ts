@@ -1,16 +1,17 @@
 // Typed SpaceTimeDB wrapper using local generated bindings
 
 import { DbConnection, type ErrorContext, type EventContext, type Lobby } from '../module_bindings';
+import type { Identity } from '@clockworklabs/spacetimedb-sdk';
 
 export type SpacetimeState = {
   conn: DbConnection | null;
-  identity: unknown | null;
+  identity: Identity | null;
   connected: boolean;
   error: string | null;
 };
 
 let currentConn: DbConnection | null = null;
-let currentIdentity: unknown | null = null;
+let currentIdentity: Identity | null = null;
 
 export async function connectSpacetime(savedToken?: string): Promise<SpacetimeState> {
   return new Promise((resolve) => {
@@ -23,7 +24,7 @@ export async function connectSpacetime(savedToken?: string): Promise<SpacetimeSt
       .withUri(uri)
       .withModuleName(moduleName)
       .withToken(savedToken)
-      .onConnect((c: DbConnection, id: unknown, token: string) => {
+  .onConnect((c: DbConnection, id: Identity, token: string) => {
         try { localStorage.setItem('auth_token', token); } catch { /* ignore quota/unavailable */ }
         state.conn = c;
         state.identity = id;
@@ -58,7 +59,7 @@ export async function connectSpacetime(savedToken?: string): Promise<SpacetimeSt
 }
 
 export function getConn(): DbConnection | null { return currentConn; }
-export function getIdentity(): unknown | null { return currentIdentity; }
+export function getIdentity(): Identity | null { return currentIdentity; }
 
 export const LobbyApi = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
