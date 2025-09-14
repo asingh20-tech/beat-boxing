@@ -1,11 +1,11 @@
-export type InputAction = 'LEFT_BLOCK' | 'LEFT_UPPERCUT' | 'LEFT_HOOK' | 'RIGHT_BLOCK' | 'RIGHT_UPPERCUT' | 'RIGHT_HOOK';
+export type InputAction = 'BLOCK' | 'LEFT_UPPERCUT' | 'LEFT_HOOK' | 'RIGHT_UPPERCUT' | 'RIGHT_HOOK';
 
 export interface InputEvent {
-  player: 1 | 2;
+  player: 1;
   action: InputAction;
   timestamp: number;
   lane: 'L' | 'R';
-  type: 'jab' | 'punch' | 'hook';
+  type: 'block' | 'uppercut' | 'hook';
 }
 
 export class InputHandler {
@@ -44,29 +44,15 @@ export class InputHandler {
     
     switch (key.toLowerCase()) {
       case 'f':
-        return { player: 1, action: 'LEFT_BLOCK', timestamp, lane: 'L', type: 'jab' };
-      case 'd':
-        return { player: 1, action: 'LEFT_UPPERCUT', timestamp, lane: 'L', type: 'punch' };
+        return { player: 1, action: 'BLOCK', timestamp, lane: 'L', type: 'block' };
+      case 'k':
+        return { player: 1, action: 'LEFT_UPPERCUT', timestamp, lane: 'L', type: 'uppercut' };
       case 's':
         return { player: 1, action: 'LEFT_HOOK', timestamp, lane: 'L', type: 'hook' };
-      case 'j':
-        return { player: 1, action: 'RIGHT_BLOCK', timestamp, lane: 'R', type: 'jab' };
-      case 'k':
-        return { player: 1, action: 'RIGHT_UPPERCUT', timestamp, lane: 'R', type: 'punch' };
+      case 'd':
+        return { player: 1, action: 'RIGHT_UPPERCUT', timestamp, lane: 'R', type: 'uppercut' };
       case 'l':
         return { player: 1, action: 'RIGHT_HOOK', timestamp, lane: 'R', type: 'hook' };
-      case 'arrowleft':
-        return { player: 2, action: 'LEFT_BLOCK', timestamp, lane: 'L', type: 'jab' };
-      case 'arrowdown':
-        return { player: 2, action: 'LEFT_UPPERCUT', timestamp, lane: 'L', type: 'punch' };
-      case 'arrowup':
-        return { player: 2, action: 'LEFT_HOOK', timestamp, lane: 'L', type: 'hook' };
-      case 'arrowright':
-        return { player: 2, action: 'RIGHT_BLOCK', timestamp, lane: 'R', type: 'jab' };
-      case 'end':
-        return { player: 2, action: 'RIGHT_UPPERCUT', timestamp, lane: 'R', type: 'punch' };
-      case 'pagedown':
-        return { player: 2, action: 'RIGHT_HOOK', timestamp, lane: 'R', type: 'hook' };
       default:
         return null;
     }
