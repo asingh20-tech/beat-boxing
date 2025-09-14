@@ -40,6 +40,10 @@ export const GameScreen: React.FC = () => {
   const comboP1Ref = useRef(gameplay.comboP1);
   const comboP2Ref = useRef(gameplay.comboP2);
 
+  type ScorePopup = { id: number; amount: number };
+  const popupIdRef = useRef(0);
+  const [scorePopups, setScorePopups] = useState<{ 1: ScorePopup[]; 2: ScorePopup[] }>({ 1: [], 2: [] });
+
   useEffect(() => { healthP1Ref.current = gameplay.healthP1; }, [gameplay.healthP1]);
   useEffect(() => { healthP2Ref.current = gameplay.healthP2; }, [gameplay.healthP2]);
   useEffect(() => { scoreP1Ref.current = gameplay.scoreP1; }, [gameplay.scoreP1]);
@@ -82,6 +86,23 @@ export const GameScreen: React.FC = () => {
     if (conn && code && player === localPlayer) {
       try { LobbyApi.setScore(conn, code, newScore); } catch (e) { console.warn('setScore failed', e); }
     }
+
+    // Show a floating +score popup above the player's head for positive scores
+    const inc = result.judgment.score;
+    if (inc > 0) {
+      const id = ++popupIdRef.current;
+      setScorePopups((prev) => ({
+        ...prev,
+        [player]: [...prev[player as 1 | 2], { id, amount: inc }],
+      }));
+      // Remove after animation ends
+      setTimeout(() => {
+        setScorePopups((prev) => ({
+          ...prev,
+          [player]: prev[player as 1 | 2].filter((p) => p.id !== id),
+        }));
+      }, 650);
+    }
   }, [updateGameplay, lobby.code, lobby.side]);
 
   const handleHealthUpdate = useCallback((player: number, healthChange: number, gameOver: boolean) => {
@@ -100,17 +121,18 @@ export const GameScreen: React.FC = () => {
     }
   }, [updateGameplay]);
 
+  const [, forceRerender] = useState(0);
+
   const handleInput = useCallback((inputEvent: InputEvent) => {
     if (isPaused || !gameEngineRef.current || !characterManagerRef.current) return;
 
-    // Map input types from inputHandler to engine types
-    const engineType: 'jab' | 'punch' | 'hook' =
-      inputEvent.type === 'block' ? 'jab' : inputEvent.type === 'uppercut' ? 'punch' : 'hook';
+  // Use engine input types directly
+  const engineType: 'block' | 'uppercut' | 'hook' = inputEvent.type;
 
     // Local player id based on side
     const localPlayer = lobby.side === 'blue' ? 2 : 1;
 
-    const result = gameEngineRef.current.handleInput(inputEvent.lane, engineType, localPlayer);
+  const result = gameEngineRef.current.handleInput(inputEvent.lane, engineType, localPlayer);
 
     if (result.judgment) {
       console.log('NoteHit', {
@@ -130,6 +152,8 @@ export const GameScreen: React.FC = () => {
         ? (inputEvent.lane === 'L' ? 'LEFT_BLOCK' : 'RIGHT_BLOCK')
         : (inputEvent.action as 'LEFT_UPPERCUT' | 'LEFT_HOOK' | 'RIGHT_UPPERCUT' | 'RIGHT_HOOK');
     characterManagerRef.current.triggerAction(localPlayer, action);
+  // Force a re-render so character image swaps immediately
+  forceRerender((n) => n + 1);
   }, [isPaused, lobby.side]);
   
   useEffect(() => {
@@ -152,6 +176,10 @@ export const GameScreen: React.FC = () => {
     gameEngineRef.current = new GameEngine(canvasRef.current, audioContext, gainNode);
     inputHandlerRef.current = new InputHandler();
     characterManagerRef.current = new CharacterSpriteManager();
+    // Re-render on pose changes (e.g., auto reset to idle)
+    characterManagerRef.current.setOnPoseChange(() => {
+      forceRerender((n) => n + 1);
+    });
     
     // Set up note result callback
     gameEngineRef.current.setNoteResultCallback(handleNoteResult);
@@ -163,6 +191,7 @@ export const GameScreen: React.FC = () => {
     gameEngineRef.current.setSongEndCallback((stats) => {
       console.log('SongFinished', stats);
       // Persist results to store and navigate to results screen
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setResults?.(stats as any);
       setScreen('RESULTS');
     });
@@ -207,6 +236,8 @@ export const GameScreen: React.FC = () => {
     handleNoteResult,
     handleHealthUpdate,
     togglePause,
+    setResults,
+    setScreen,
   ]);
 
   // React to volume changes in settings
@@ -252,53 +283,46 @@ export const GameScreen: React.FC = () => {
   const CharacterPanel: React.FC<{ player: 1 | 2 }> = ({ player }) => {
     const character = player === 1 ? players.p1 : players.p2;
     const score = player === 1 ? gameplay.scoreP1 : gameplay.scoreP2;
-    const combo = player === 1 ? gameplay.comboP1 : gameplay.comboP2;
-    const accuracy = player === 1 ? gameplay.accuracyP1 : gameplay.accuracyP2;
-    const health = player === 1 ? gameplay.healthP1 : gameplay.healthP2;
+  // (combo, accuracy, health not displayed in the simplified panel)
     
-    if (!character.characterId) return null;
-    
-    const pose = characterManagerRef.current?.getCurrentPose(player) || 'idle';
-    const colorClass = player === 1 ? 'from-pink-500 to-purple-600' : 'from-cyan-400 to-blue-500';
-    
+    const isP2 = player === 2;
+    const showPlaceholder = (isP2 && !lobby.connectedP2) || !character.characterId;
+    const base = character.characterId === 'mmafighter' ? 'mmafighter' : 'boxer';
+    const idle = showPlaceholder ? '/images/characters/noplayer.png' : `/images/characters/${base}.png`;
+    const punch = showPlaceholder ? '/images/characters/noplayer.png' : `/images/characters/${base}-punch.png`;
+    const isPunching = !showPlaceholder && characterManagerRef.current?.getCurrentPose(player) !== 'idle';
+
+    const labelColor = player === 1 ? 'text-pink-300' : 'text-cyan-300';
+    const myPopups = scorePopups[player];
+
     return (
-      <div className="bg-gray-900/90 rounded-lg p-6 border-2 border-white/30 shadow-2xl backdrop-blur-sm max-w-xs">
-        <div className="text-center mb-4">
-          <h3 className="text-white font-bold text-xl arcade-text">PLAYER {player}</h3>
-          <div className="text-gray-300 text-sm arcade-text">{character.characterId?.toUpperCase()}</div>
-        </div>
-        
-        {/* Character Display */}
-        <div className={`w-32 h-40 mx-auto mb-6 bg-gradient-to-br ${colorClass} rounded-lg flex items-center justify-center relative overflow-hidden shadow-lg`}>
-          <div className="text-6xl">👤</div>
-          {pose !== 'idle' && (
-            <div className="absolute inset-0 bg-white/30 animate-pulse rounded-lg"></div>
-          )}
-          {/* Graffiti tag */}
-             <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded transform rotate-12">
-               {pose === 'jab' ? 'BLOCK' : pose === 'punch' ? 'UPPERCUT' : pose.toUpperCase()}
-          </div>
-        </div>
-        
-        {/* Stats */}
-        <div className="space-y-3 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-400">Score</span>
-            <span className="text-white font-bold arcade-text">{score.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Combo</span>
-            <span className="text-yellow-400 font-bold arcade-text">{combo}x</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Accuracy</span>
-            <span className="text-cyan-400 font-bold arcade-text">{accuracy.toFixed(1)}%</span>
-          </div>
-        </div>
-        
-        {/* Control hints */}
-        <div className="mt-6 text-xs text-gray-400 text-center arcade-text">
-          {player === 1 ? 'F/D/S = L Block/Uppercut/Hook, J/K/L = R Block/Uppercut/Hook' : '←/↓/↑ = L Block/Uppercut/Hook, →/End/PgDn = R Block/Uppercut/Hook'}
+      <div className="max-w-sm text-center">
+        {/* Score label above character - more prominent */}
+        <div className={`inline-block arcade-text ${labelColor} text-4xl md:text-5xl bg-black/70 rounded px-4 py-1 mb-2`}>{score.toLocaleString()}</div>
+        {/* Layer both images and toggle visibility for instant swap */}
+        <div className="relative w-96 h-96 md:w-[28rem] md:h-[28rem] lg:w-[32rem] lg:h-[32rem] mx-auto select-none">
+          <img
+            src={idle}
+            alt={`${base}-idle`}
+            className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-0 ${isPunching ? 'opacity-0' : 'opacity-100'}`}
+            draggable={false}
+            loading="eager"
+            decoding="sync"
+          />
+          <img
+            src={punch}
+            alt={`${base}-punch`}
+            className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-0 ${isPunching ? 'opacity-100' : 'opacity-0'}`}
+            draggable={false}
+            loading="eager"
+            decoding="sync"
+          />
+          {/* Floating +score popups */}
+          {myPopups.map((p) => (
+            <div key={p.id} className="score-popup top-0 text-lime-300 font-black text-2xl md:text-3xl">
+              +{p.amount}
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -353,9 +377,9 @@ export const GameScreen: React.FC = () => {
           />
         </div>
         
-        {/* Player 2 Character Area */}
+        {/* Player 2 Character Area (always visible; placeholder until connected) */}
         <div className="flex-1 flex justify-center">
-          {lobby.connectedP2 && <CharacterPanel player={2} />}
+          <CharacterPanel player={2} />
         </div>
       </div>
       

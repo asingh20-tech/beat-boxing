@@ -377,7 +377,7 @@ export const SongSelectScreen: React.FC = () => {
                 <div className="text-sm font-bold text-cyan-400 mb-1">PLAYER 2</div>
                 {!lobby.connectedP2 ? (
                   <img
-                    src="/images/characters/Untitled%20design(1).png"
+                    src="/images/characters/noplayer.png"
                     alt="No Player Connected"
                     className="w-[26rem] h-[26rem] object-contain select-none"
                     draggable={false}
