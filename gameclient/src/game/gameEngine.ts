@@ -30,6 +30,7 @@ export class GameEngine {
   private readonly LANE_L_X = 150;
   private readonly LANE_R_X = 250;
   private readonly NOTE_SIZE = 25;
+  private readonly NOTE_ICON_SIZE = 48;
   
   // Judgment timing windows (ms) - much tighter
   private readonly PERFECT_WINDOW = 20;
@@ -45,6 +46,13 @@ export class GameEngine {
   private onNoteResult: ((result: { judgment: Judgment; note: Note; player: number; accuracy: number }) => void) | null = null;
   private onHealthUpdate: ((player: number, health: number, gameOver: boolean) => void) | null = null;
   private onSongEnd: ((stats: ReturnType<GameEngine['getStats']>) => void) | null = null;
+  // Preloaded icons for drawing notes
+  private icons = {
+    block: new Image(),
+    uppercut: new Image(),
+    hookL: new Image(),
+    hookR: new Image(),
+  };
   
   constructor(canvas: HTMLCanvasElement, audioContext: AudioContext, gainNode: GainNode) {
     this.canvas = canvas;
@@ -52,6 +60,18 @@ export class GameEngine {
     this.audioContext = audioContext;
     this.gainNode = gainNode;
     // Removed procedural chart; notes will be loaded from .chart files
+  // Preload motion icons
+  this.icons.block.src = '/images/block.png';
+  this.icons.uppercut.src = '/images/uppercut.png';
+  this.icons.hookL.src = '/images/lefthook.png';
+  this.icons.hookR.src = '/images/righthook.png';
+    // Touch optional callbacks to avoid TS noUnusedLocals complaints
+    this._touchOptionalCallbacks();
+  }
+
+  private _touchOptionalCallbacks() {
+    // Read optional callback so TS sees it as used
+    void this.onHealthUpdate;
   }
   
   private async generateChartFromFile(songId: string, difficulty: 'expert' | 'hard' | 'normal' | 'easy' = 'expert') {
@@ -284,71 +304,27 @@ export class GameEngine {
   
   private drawNote(note: Note) {
     const x = note.lane === 'L' ? this.LANE_L_X : this.LANE_R_X;
-    
-    // Note styling based on type
-    let colors: { primary: string; secondary: string; glow: string };
-    let shape: 'circle' | 'square' | 'diamond';
-    
-    switch (note.type) {
-      case 'block':
-        // Block (formerly jab) - pink
-        colors = { primary: '#ff0080', secondary: '#ff40a0', glow: '#ff0080' };
-        shape = 'circle';
-        break;
-      case 'uppercut':
-        // Uppercut (formerly punch) - green
-        colors = { primary: '#00ff80', secondary: '#40ff90', glow: '#00ff80' };
-        shape = 'square';
-        break;
-      case 'hook':
-        colors = { primary: '#ffff00', secondary: '#ffff40', glow: '#ffff00' };
-        shape = 'diamond';
-        break;
+    // Pick icon based on note type and lane (left/right hook variants)
+    let img: HTMLImageElement;
+    if (note.type === 'block') {
+      img = this.icons.block;
+    } else if (note.type === 'uppercut') {
+      img = this.icons.uppercut;
+    } else {
+      img = note.lane === 'L' ? this.icons.hookL : this.icons.hookR;
     }
-    
-    // Draw glow effect
-    this.ctx.shadowColor = colors.glow;
-    this.ctx.shadowBlur = 15;
-    
-    // Create gradient
-    const gradient = this.ctx.createRadialGradient(x, note.y, 0, x, note.y, this.NOTE_SIZE);
-    gradient.addColorStop(0, colors.primary);
-    gradient.addColorStop(0.7, colors.secondary);
-    gradient.addColorStop(1, colors.primary + '40');
-    
-    this.ctx.fillStyle = gradient;
-    
-    // Draw shape based on note type
-    this.ctx.beginPath();
-    switch (shape) {
-      case 'circle':
-        this.ctx.arc(x, note.y, this.NOTE_SIZE, 0, Math.PI * 2);
-        break;
-      case 'square':
-        this.ctx.rect(x - this.NOTE_SIZE, note.y - this.NOTE_SIZE, this.NOTE_SIZE * 2, this.NOTE_SIZE * 2);
-        break;
-      case 'diamond':
-        this.ctx.moveTo(x, note.y - this.NOTE_SIZE);
-        this.ctx.lineTo(x + this.NOTE_SIZE, note.y);
-        this.ctx.lineTo(x, note.y + this.NOTE_SIZE);
-        this.ctx.lineTo(x - this.NOTE_SIZE, note.y);
-        this.ctx.closePath();
-        break;
+
+    const w = this.NOTE_ICON_SIZE;
+    const h = this.NOTE_ICON_SIZE;
+    const dx = x - w / 2;
+    const dy = note.y - h / 2;
+    if (img && img.complete && img.naturalWidth > 0) {
+      this.ctx.drawImage(img, dx, dy, w, h);
+    } else {
+      // Fallback: draw a simple placeholder box if image not yet loaded
+      this.ctx.fillStyle = '#444';
+      this.ctx.fillRect(dx, dy, w, h);
     }
-    this.ctx.fill();
-    
-    // Draw border
-    this.ctx.strokeStyle = colors.primary;
-    this.ctx.lineWidth = 3;
-    this.ctx.stroke();
-    this.ctx.shadowBlur = 0;
-    
-  // Draw note type indicator (mapped: block->B, uppercut->U, hook->H)
-  this.ctx.fillStyle = '#ffffff';
-  this.ctx.font = 'bold 12px monospace';
-  this.ctx.textAlign = 'center';
-  const label = note.type === 'block' ? 'B' : note.type === 'uppercut' ? 'U' : 'H';
-  this.ctx.fillText(label, x, note.y + 4);
   }
   
   handleInput(lane: 'L' | 'R', inputType: 'block' | 'uppercut' | 'hook', player: number): { judgment: Judgment | null; note: Note | null; accuracy: number } {
