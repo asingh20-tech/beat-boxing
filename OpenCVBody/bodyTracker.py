@@ -3,6 +3,7 @@ import time
 import numpy as np
 import math
 from collections import deque
+import pyautogui
 
 try:
     import mediapipe as mp
@@ -362,6 +363,28 @@ class PunchDetector:
         return None
 
 
+def punch_label_to_key(label):
+    """
+    Map punch detector label to the actual key string as per your mapping.
+    Returns the key string or None.
+    """
+    if not label:
+        return None
+    label = label.lower()
+    if label == "block":
+        return 'f'  # LEFT_BLOCK
+    if label.startswith("hook"):
+        if "r" in label:
+            return 'l'  # RIGHT_HOOK
+        else:
+            return 's'  # LEFT_HOOK
+    if label.startswith("uppercut"):
+        if "r" in label:
+            return 'k'  # RIGHT_UPPERCUT
+        else:
+            return 'd'  # LEFT_UPPERCUT
+    return None
+
 def _demo():
     cap = cv2.VideoCapture(0)
     cap.set(3, 640)
@@ -405,6 +428,9 @@ def _demo():
             if label:
                 show_label = label
                 show_until = time.time() + 1.2
+                key = punch_label_to_key(label)
+                if key:
+                    pyautogui.press(key)
 
         # FPS and overlays
         curr_time = time.time()
