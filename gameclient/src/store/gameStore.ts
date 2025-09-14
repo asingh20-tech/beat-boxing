@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { connectSpacetime, getConn, LobbyApi, subscribeLobby } from '../lib/spacetime';
+import { connectSpacetime, getConn, getIdentity, LobbyApi, subscribeLobby } from '../lib/spacetime';
 
 let lobbyUnsub: (() => void) | null = null;
 
@@ -23,6 +23,8 @@ export interface Lobby {
   p2Ready: boolean;
   redPresent?: boolean;
   bluePresent?: boolean;
+  // which side this client is? 'red' means Player 1, 'blue' means Player 2
+  side?: 'red' | 'blue';
 }
 
 export interface Settings {
@@ -86,6 +88,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     p2Ready: false,
   redPresent: false,
   bluePresent: false,
+  side: undefined,
   },
   settings: {
     volume: 0.8,
@@ -165,13 +168,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (st.conn && st.connected) doCreate(st.conn);
       });
     }
-    set((state) => ({
+  set((state) => ({
       lobby: {
         ...state.lobby,
         mode: 'host',
         code,
         p1Ready: false,
         p2Ready: false,
+    side: 'red',
       },
     }));
     // subscribe to lobby row to reflect P2 presence
@@ -182,6 +186,12 @@ export const useGameStore = create<GameState>((set, get) => ({
           connectedP2: !!row?.red && !!row?.blue,
           redPresent: !!row?.red,
           bluePresent: !!row?.blue,
+          // if we're hosting and the server moved us to blue for some reason, follow it
+          side: (() => {
+            const id = getIdentity();
+            if (!row || !id) return state.lobby.side;
+            return (row.red && row.red === id) ? 'red' : (row.blue && row.blue === id) ? 'blue' : state.lobby.side;
+          })(),
         }
       }));
     });
@@ -204,7 +214,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (st.conn && st.connected) doJoin(st.conn);
       });
     }
-    set((state) => ({
+  set((state) => ({
       lobby: {
         ...state.lobby,
         mode: 'join',
@@ -212,6 +222,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         connectedP2: false,
         p1Ready: false,
         p2Ready: false,
+    // tentative until subscription tells us which slot we are
+    side: undefined,
       },
     }));
   const unsub = subscribeLobby(code, (row) => {
@@ -221,6 +233,11 @@ export const useGameStore = create<GameState>((set, get) => ({
           connectedP2: !!row?.red && !!row?.blue,
           redPresent: !!row?.red,
           bluePresent: !!row?.blue,
+          side: (() => {
+            const id = getIdentity();
+            if (!row || !id) return state.lobby.side;
+            return (row.red && row.red === id) ? 'red' : (row.blue && row.blue === id) ? 'blue' : state.lobby.side;
+          })(),
         }
       }));
     });
@@ -229,18 +246,31 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   
   toggleReady: (player) => {
-    console.log('PlayerReady', { player, ready: !get().lobby[`p${player}Ready`] });
-    set((state) => ({
-      lobby: {
-        ...state.lobby,
-        [`p${player}Ready`]: !state.lobby[`p${player}Ready`],
-      },
-    }));
+    const st = get();
+    const desired = !st.lobby[`p${player}Ready` as const];
+    console.log('PlayerReady', { player, ready: desired });
+    // Optimistic local toggle
+    set((state) => {
+      const key: keyof Lobby = player === 1 ? 'p1Ready' : 'p2Ready';
+      return { lobby: { ...state.lobby, [key]: desired } as Lobby };
+    });
+    // Persist to server, but only allow local side to change itself
+    const conn = getConn();
+    const side = get().lobby.side;
+    const canChange = (player === 1 && side === 'red') || (player === 2 && side === 'blue');
+    if (conn && canChange && st.lobby.code) {
+      try { LobbyApi.setReady(conn, st.lobby.code, desired); } catch (e) { console.warn('setReady failed', e); }
+    }
+    // Auto-start when both ready and song chosen
+    const bothReady = get().lobby.p1Ready && get().lobby.p2Ready;
+    if (bothReady && get().song) {
+      get().startMatch();
+    }
   },
   
   startMatch: () => {
-    const { lobby } = get();
-    const mode = lobby.connectedP2 ? 'versus' : 'solo';
+  const { lobby } = get();
+  const mode = lobby.connectedP2 ? 'versus' : 'solo';
     console.log('MatchStart', { mode });
     set((state) => ({
       currentScreen: 'GAME',
