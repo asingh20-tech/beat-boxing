@@ -26,7 +26,8 @@ export const GameScreen: React.FC = () => {
     gameplay, 
     updateGameplay, 
     settings,
-    setScreen
+    setScreen,
+    setResults
   } = useGameStore();
   
   const [isPaused, setIsPaused] = useState(false);
@@ -157,6 +158,14 @@ export const GameScreen: React.FC = () => {
     
     // Set up health update callback
     gameEngineRef.current.setHealthUpdateCallback(handleHealthUpdate);
+    
+    // Set up song end callback -> show results screen
+    gameEngineRef.current.setSongEndCallback((stats) => {
+      console.log('SongFinished', stats);
+      // Persist results to store and navigate to results screen
+      setResults?.(stats as any);
+      setScreen('RESULTS');
+    });
 
     // Setup character sprites
     if (players.p1.characterId) {

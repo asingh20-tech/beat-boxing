@@ -6,6 +6,7 @@ import { SongSelectScreen } from './screens/SongSelectScreen';
 import { GameScreen } from './screens/GameScreen';
 import { HowToPlayScreen } from './screens/HowToPlayScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { ResultsScreen } from './screens/ResultsScreen';
 import { connectSpacetime } from './lib/spacetime';
 
 function App() {
@@ -59,7 +60,8 @@ function App() {
       case 'SONG_SELECT': return <SongSelectScreen />;
       case 'GAME': return <GameScreen />;
       case 'HOW_TO_PLAY': return <HowToPlayScreen />;
-      case 'SETTINGS': return <SettingsScreen />;
+  case 'SETTINGS': return <SettingsScreen />;
+  case 'RESULTS': return <ResultsScreen />;
       default: return <TitleScreen />;
     }
   };

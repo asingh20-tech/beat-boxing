@@ -1,7 +1,7 @@
 export interface Note {
   id: string;
   lane: 'L' | 'R';
-  type: 'jab' | 'punch' | 'hook';
+  type: 'block' | 'uppercut' | 'hook';
   time: number;
   y: number;
   hit: boolean;
@@ -44,6 +44,7 @@ export class GameEngine {
   private missedHits = 0;
   private onNoteResult: ((result: { judgment: Judgment; note: Note; player: number; accuracy: number }) => void) | null = null;
   private onHealthUpdate: ((player: number, health: number, gameOver: boolean) => void) | null = null;
+  private onSongEnd: ((stats: ReturnType<GameEngine['getStats']>) => void) | null = null;
   
   constructor(canvas: HTMLCanvasElement, audioContext: AudioContext, gainNode: GainNode) {
     this.canvas = canvas;
@@ -87,13 +88,15 @@ export class GameEngine {
       const { parseChartToMoves } = await import('../lib/chartParser');
       const moves = parseChartToMoves(text, difficulty);
 
-      const laneMap: Record<number, 'L' | 'R'> = { 0: 'L', 1: 'R', 2: 'R' };
-      const typeFromMove: Record<string, Note['type']> = { jab: 'jab', punch: 'punch', hook: 'hook' };
+  const laneMap: Record<number, 'L' | 'R'> = { 0: 'L', 1: 'R', 2: 'R' };
+  // Chart parser may emit legacy move names like 'jab'/'punch'/'hook'. Map them to the
+  // engine's input types: 'block' | 'uppercut' | 'hook'.
+  const typeFromMove: Record<string, Note['type']> = { jab: 'block', punch: 'uppercut', hook: 'hook' };
 
       this.notes = moves.map((m, idx) => ({
         id: `note-${idx}-${m.rawPoint}`,
         lane: laneMap[m.laneIndex] ?? 'L',
-        type: typeFromMove[m.move] ?? 'jab',
+  type: typeFromMove[m.move] ?? 'block',
         time: m.ms,
         y: -this.NOTE_SIZE,
         hit: false,
@@ -144,7 +147,30 @@ export class GameEngine {
     
     this.audioElement.addEventListener('ended', () => {
       console.log('MusicEnd', { songId });
+      // When the music ends, end the game and report stats
+      try {
+        this.endGame();
+      } catch (e) {
+        console.warn('EndGameError', e);
+      }
     });
+  }
+
+  setSongEndCallback(callback: (stats: ReturnType<GameEngine['getStats']>) => void) {
+    this.onSongEnd = callback;
+  }
+
+  private endGame() {
+    // Stop the game loop/audio and notify listener with final stats
+    const stats = this.getStats();
+    this.stop();
+    if (this.onSongEnd) {
+      try {
+        this.onSongEnd(stats);
+      } catch (e) {
+        console.warn('onSongEnd callback failed', e);
+      }
+    }
   }
   
   setNoteResultCallback(callback: (result: { judgment: Judgment; note: Note; player: number; accuracy: number }) => void) {
@@ -188,9 +214,7 @@ export class GameEngine {
           });
           
           // Deduct health for missed note
-          if (this.onHealthUpdate) {
-            this.onHealthUpdate(1, -5, false); // Deduct 5 health
-          }
+            // (Health deduction removed) -- engine no longer deducts health on auto-miss
           
           if (this.onNoteResult) {
             this.onNoteResult({
@@ -266,11 +290,13 @@ export class GameEngine {
     let shape: 'circle' | 'square' | 'diamond';
     
     switch (note.type) {
-      case 'jab':
+      case 'block':
+        // Block (formerly jab) - pink
         colors = { primary: '#ff0080', secondary: '#ff40a0', glow: '#ff0080' };
         shape = 'circle';
         break;
-      case 'punch':
+      case 'uppercut':
+        // Uppercut (formerly punch) - green
         colors = { primary: '#00ff80', secondary: '#40ff90', glow: '#00ff80' };
         shape = 'square';
         break;
@@ -317,15 +343,15 @@ export class GameEngine {
     this.ctx.stroke();
     this.ctx.shadowBlur = 0;
     
-  // Draw note type indicator (mapped: jab->B, punch->U, hook->H)
+  // Draw note type indicator (mapped: block->B, uppercut->U, hook->H)
   this.ctx.fillStyle = '#ffffff';
   this.ctx.font = 'bold 12px monospace';
   this.ctx.textAlign = 'center';
-  const label = note.type === 'jab' ? 'B' : note.type === 'punch' ? 'U' : 'H';
+  const label = note.type === 'block' ? 'B' : note.type === 'uppercut' ? 'U' : 'H';
   this.ctx.fillText(label, x, note.y + 4);
   }
   
-  handleInput(lane: 'L' | 'R', inputType: 'jab' | 'punch' | 'hook', player: number): { judgment: Judgment | null; note: Note | null; accuracy: number } {
+  handleInput(lane: 'L' | 'R', inputType: 'block' | 'uppercut' | 'hook', player: number): { judgment: Judgment | null; note: Note | null; accuracy: number } {
     // Find the closest unhit note in the specified lane that matches the input type
     const laneNotes = this.notes.filter(note => 
       note.lane === lane && 
@@ -344,9 +370,8 @@ export class GameEngine {
       const accuracy = this.calculateAccuracy();
 
       // If it's a wrong-lane press near a valid note, don't penalize health.
-      if (otherLaneNotes.length === 0 && this.onHealthUpdate) {
-        // True whiff: deduct health
-        this.onHealthUpdate(player, -5, false);
+          if (otherLaneNotes.length === 0) {
+            // (Health deduction removed) -- engine no longer deducts health for whiffs
       }
 
       if (this.onNoteResult) {
@@ -394,9 +419,7 @@ export class GameEngine {
       this.missedHits++;
       
       // Deduct health for missed note
-      if (this.onHealthUpdate) {
-        this.onHealthUpdate(player, -5, false); // Deduct 5 health
-      }
+        // (Health deduction removed) -- engine no longer deducts health for missed hits
       
       console.log('NoteMiss', { player, lane, deltaMs });
     }
