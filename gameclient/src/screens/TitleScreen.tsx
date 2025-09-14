@@ -92,12 +92,14 @@ export const TitleScreen: React.FC = () => {
           />
         </div>
         <div className="animate-pulse">
-          <p className="text-xl text-cyan-400 arcade-text font-bold mb-4">
+          {/* Changed enter prompt text color to white */}
+          <p className="text-xl text-white arcade-text font-bold mb-4">
             PRESS ENTER TO CONTINUE
           </p>
           <div className="flex justify-center">
             <div className="px-6 py-3 border-2 border-cyan-400/50 rounded-lg bg-cyan-400/10 backdrop-blur-sm">
-              <span className="text-cyan-400 font-mono text-lg">⏎ ENTER</span>
+              {/* Changed ENTER label text color to white */}
+              <span className="text-white font-mono text-lg">⏎ ENTER</span>
             </div>
           </div>
         </div>
