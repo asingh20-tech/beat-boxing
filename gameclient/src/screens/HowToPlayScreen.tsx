@@ -124,7 +124,7 @@ export const HowToPlayScreen: React.FC = () => {
 
           {/* Note Types */}
           <Box>
-            <h3 className="font-bold text-purple-400 mt-20 arcade-text">NOTE TYPES</h3>
+            <h3 className="font-bold text-purple-400 mt-14 arcade-text">NOTE TYPES</h3>
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <div className="w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center text-xs font-bold">B</div>
