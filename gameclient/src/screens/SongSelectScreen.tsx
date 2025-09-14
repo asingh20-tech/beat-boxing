@@ -12,11 +12,12 @@ interface Character {
   speed: number;
   style: number;
   color: string;
+  image?: string; // optional image path
 }
 
 const CHARACTERS: Character[] = [
-  { id: 'striker', name: 'STRIKER', power: 85, speed: 70, style: 60, color: 'from-red-500 to-orange-500' },
-  { id: 'guardian', name: 'GUARDIAN', power: 60, speed: 85, style: 80, color: 'from-blue-500 to-cyan-500' },
+  { id: 'boxer', name: 'BOXER', power: 80, speed: 70, style: 65, color: 'from-red-500 to-orange-500', image: '/images/characters/boxer.png' },
+  { id: 'mmafighter', name: 'MMA FIGHTER', power: 80, speed: 75, style: 70, color: 'from-pink-500 to-red-500', image: '/images/characters/mmafighter.png' },
 ];
 
 type AppWindow = Window & { gameAudioContext?: AudioContext; gameGainNode?: GainNode };
@@ -34,9 +35,29 @@ export const SongSelectScreen: React.FC = () => {
   const [focusMode, setFocusMode] = useState<'song' | 'character'>('song');
   const [previewAudio, setPreviewAudio] = useState<HTMLAudioElement | null>(null);
   const currentSongRef = useRef<string>('');
+  const listRef = useRef<HTMLDivElement | null>(null);
   const [joinCode, setJoinCode] = useState('');
-  const containerRef = useRef<HTMLDivElement | null>(null);
-const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
+  // Removed unused containerRef and itemRefs
+
+  const isSolo = lobby.mode === 'solo';
+
+  // Compute current character indices for each player from store
+  const p1CharIndex = React.useMemo(() => {
+    const idx = CHARACTERS.findIndex((c) => c.id === players.p1.characterId);
+    return idx >= 0 ? idx : 0;
+  }, [players.p1.characterId]);
+  const p2CharIndex = React.useMemo(() => {
+    const idx = CHARACTERS.findIndex((c) => c.id === players.p2.characterId);
+    return idx >= 0 ? idx : 0;
+  }, [players.p2.characterId]);
+
+  // Keep the local selection index in sync with the local player's character
+  useEffect(() => {
+    const localPlayer = lobby.side !== 'blue' ? 1 : 2;
+    const currentId = localPlayer === 1 ? players.p1.characterId : players.p2.characterId;
+    const idx = CHARACTERS.findIndex((c) => c.id === currentId);
+    if (idx >= 0) setSelectedCharIndex(idx);
+  }, [players.p1.characterId, players.p2.characterId, lobby.side]);
 
   const playPreview = useCallback((songItem: Song) => {
     if (previewAudio && currentSongRef.current !== songItem.id) {
@@ -86,6 +107,13 @@ const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
     loadSongs();
   }, [playPreview, selectSong, song]);
 
+  // Keep selected song visible when navigating
+  useEffect(() => {
+    if (focusMode !== 'song') return;
+    const el = document.getElementById(`song-item-${selectedSongIndex}`);
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [selectedSongIndex, focusMode]);
+
   useEffect(() => {
     const w = window as AppWindow;
     if (!w.gameAudioContext) {
@@ -124,7 +152,7 @@ const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
   }, [lobby.connectedP2, lobby.mode, lobby.p1Ready, lobby.p2Ready, players.p1.characterId, players.p2.characterId, song]);
 
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
+  const handleKeyDown = (event: KeyboardEvent) => {
       switch (event.key) {
         case 'ArrowUp': {
           event.preventDefault();
@@ -135,9 +163,28 @@ const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
             playPreview(songs[newIndex]);
             playNavSfx();
           } else {
+            // Up/Down no-op for character; use Left/Right per UX
+          }
+          break;
+        }
+        case 'ArrowLeft': {
+          if (focusMode === 'character') {
+            event.preventDefault();
             const newIndex = (selectedCharIndex - 1 + CHARACTERS.length) % CHARACTERS.length;
             setSelectedCharIndex(newIndex);
-            selectCharacter(1, CHARACTERS[newIndex].id);
+            const lp = lobby.side !== 'blue' ? 1 : 2;
+            selectCharacter(lp as 1 | 2, CHARACTERS[newIndex].id);
+            playNavSfx();
+          }
+          break;
+        }
+        case 'ArrowRight': {
+          if (focusMode === 'character') {
+            event.preventDefault();
+            const newIndex = (selectedCharIndex + 1) % CHARACTERS.length;
+            setSelectedCharIndex(newIndex);
+            const lp = lobby.side !== 'blue' ? 1 : 2;
+            selectCharacter(lp as 1 | 2, CHARACTERS[newIndex].id);
             playNavSfx();
           }
           break;
@@ -151,10 +198,7 @@ const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
             playPreview(songs[newIndex]);
             playNavSfx();
           } else {
-            const newIndex = (selectedCharIndex + 1) % CHARACTERS.length;
-            setSelectedCharIndex(newIndex);
-            selectCharacter(1, CHARACTERS[newIndex].id);
-            playNavSfx();
+            // Up/Down no-op for character; use Left/Right per UX
           }
           break;
         }
@@ -202,101 +246,60 @@ const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedSongIndex, selectedCharIndex, focusMode, selectSong, selectCharacter, startMatch, setScreen, songs, lobby.mode, lobby.side, toggleReady, canStart, playPreview]);
 
-  const getDifficultyColor = (difficulty: Song['difficulty']) => {
-    switch (difficulty) {
-      case 'Easy': return 'text-green-400 bg-green-400/20';
-      case 'Medium': return 'text-yellow-400 bg-yellow-400/20';
-      case 'Hard': return 'text-red-400 bg-red-400/20';
-    }
-  };
 
   return (
     <div
       className="min-h-screen bg-cover bg-center p-8 relative"
-      style={{ backgroundImage: "url('/images/HomeBackground.jpeg')" }}
+  style={{ backgroundImage: "url('/images/SongBackground.png')" }}
     >
-      <div className="max-w-7xl mx-auto">
+  {/* Background overlay */}
+  <div className="absolute inset-0 bg-black/40" />
+  <div className="max-w-7xl mx-auto relative z-10 font-minecraftia">
         {/* Main Content */}
         <div className="flex gap-8 mb-8 relative z-10 justify-center items-start">
-          {/* Multiplayer Lobby Controls */}
-          {lobby.mode !== 'solo' && (
-            <div className="mb-6 relative z-10">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Host */}
-                <GraffitiPanel variant={lobby.code ? 'outlined' : 'default'}>
-                  <div className="text-center">
-                    <h3 className="text-2xl font-bold text-white mb-2">MULTIPLAYER LOBBY</h3>
-                    <div className={`text-xs mb-2 ${netConnected ? 'text-green-400' : netError ? 'text-red-400' : 'text-yellow-300'}`}>
-                      {netConnected ? 'Connected to server' : netError ? `Connection error: ${netError}` : 'Connecting to server…'}
-                    </div>
-                    {lobby.code ? (
-                      <>
-                        <div className="text-gray-300 text-sm">ROOM CODE</div>
-                        <div className="text-cyan-400 font-mono text-3xl font-black tracking-widest mb-2">{lobby.code}</div>
-                        <div className={`text-sm ${lobby.connectedP2 ? 'text-green-400' : 'text-yellow-400'}`}>
-                          {lobby.connectedP2 ? 'Both players connected' : 'Waiting for opponent…'}
-                        </div>
-                        <div className="text-xs text-gray-400 mt-1">
-                          P1: {lobby.redPresent ? 'present' : '—'} • P2: {lobby.bluePresent ? 'present' : '—'}
-                        </div>
-                        <div className="mt-3">
-                          <NeonButton
-                            variant="secondary"
-                            onClick={async () => { try { await navigator.clipboard.writeText(lobby.code!); } catch (e) { console.warn('Copy failed', e); } }}
-                          >COPY CODE</NeonButton>
-                        </div>
-                      </>
-                    ) : (
-                      <NeonButton variant="primary" onClick={hostLobby} disabled={!netConnected}>CREATE ROOM</NeonButton>
-                    )}
-                  </div>
-                </GraffitiPanel>
-                {/* Join */}
-                <GraffitiPanel>
-                  <div className="text-center">
-                    <h3 className="text-2xl font-bold text-white mb-2">JOIN LOBBY</h3>
-                    <p className="text-gray-300 mb-3">Enter a 6-character code</p>
-                    <div className="flex gap-2 justify-center">
-                      <input
-                        type="text"
-                        value={joinCode}
-                        onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                        maxLength={6}
-                        placeholder="ENTER CODE"
-                        className="w-48 px-3 py-2 bg-gray-800 border-2 border-cyan-400/50 rounded text-white font-mono text-sm focus:outline-none focus:border-cyan-400"
-                      />
-                      <NeonButton
-                        variant="secondary"
-                        disabled={joinCode.length !== 6 || !netConnected}
-                        onClick={() => joinLobby(joinCode)}
-                      >JOIN</NeonButton>
-                    </div>
-                    {!netConnected && (
-                      <div className="text-xs text-yellow-300 mt-2">Waiting for server connection…</div>
-                    )}
-                  </div>
-                </GraffitiPanel>
+          {/* Player 1 Character - Left (always visible) */}
+          <div className="flex-shrink-0 mt-6">
+            <div className="flex flex-col items-center">
+              <div className="text-sm font-bold text-pink-400 mb-1">PLAYER 1</div>
+              {CHARACTERS[p1CharIndex]?.image ? (
+                <img
+                  src={CHARACTERS[p1CharIndex].image!}
+                  alt={CHARACTERS[p1CharIndex].name}
+                  className={`${isSolo ? 'w-[32rem] h-[32rem]' : 'w-[26rem] h-[26rem]'} object-contain select-none`}
+                  draggable={false}
+                />
+              ) : (
+                <div className={`${isSolo ? 'w-[32rem] h-[32rem]' : 'w-[26rem] h-[26rem]'} flex items-center justify-center text-gray-300`}>
+                  No Image
+                </div>
+              )}
+              <div className="mt-3 text-center">
+                <div className="text-base text-gray-200 tracking-wide">CHARACTER</div>
+                <div className={`${isSolo ? 'text-4xl' : 'text-3xl'} font-bold text-white`}>{CHARACTERS[p1CharIndex]?.name}</div>
               </div>
+              <div className={`text-cyan-300 ${isSolo ? 'text-base' : 'text-sm'} mt-1`}>POWER {CHARACTERS[p1CharIndex]?.power} • SPEED {CHARACTERS[p1CharIndex]?.speed} • STYLE {CHARACTERS[p1CharIndex]?.style}</div>
+              {lobby.mode !== 'solo' && (
+                <div className={`mt-2 text-sm font-bold ${lobby.p1Ready ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {lobby.p1Ready ? 'READY' : 'NOT READY'}
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
-          {/* Character Selection - Hidden for now */}
-          <div className="hidden">{/* reserved */}</div>
-
-          {/* Song Selection - Center (no panel chrome) */}
-          <div className="flex-1 max-w-2xl">
+      {/* Song Selection - Center (bigger in solo) */}
+      <div className={`flex-1 ${isSolo ? 'max-w-2xl' : 'max-w-xl'} mx-auto`}>
             <div className="bg-transparent border-none shadow-none">
-              {/* Title image */}
-              <div className="-mt-6 mb-4 transform -translate-x-32">
+        {/* Title image (centered) */}
+        <div className="-mt-6 mb-3 flex justify-center">
                 <img
                   src="/images/SongSelection.png"
                   alt="Song Selection"
-                  className="max-w-[900px]"
+          className={`${isSolo ? 'max-w-[680px]' : 'max-w-[520px]'} mx-auto`}
                 />
               </div>
 
-              {/* Song list */}
-              <div className="space-y-4 max-h-[700px] overflow-y-auto">
+        {/* Song list (compact) */}
+  <div ref={listRef} className={`space-y-1 ${isSolo ? 'max-h-[640px] w-[680px]' : 'max-h-[520px] w-[560px]'} overflow-y-auto mx-auto`}>
                 {songs.map((songItem, index) => (
                   <button
                     key={songItem.id}
@@ -309,8 +312,9 @@ const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
                     className="block w-full focus:outline-none"
                   >
                     <div
-                      className={`relative w-full max-w-[900px] mx-auto transition-transform duration-150 ${
-                        selectedSongIndex === index && focusMode === 'song' ? 'scale-105' : 'scale-100'
+                      id={`song-item-${index}`}
+                      className={`relative w-full max-w-[560px] mx-auto transition-transform duration-150 ${
+                        selectedSongIndex === index && focusMode === 'song' ? 'scale-[1.02]' : 'scale-100'
                       }`}
                     >
                       {/* Box art */}
@@ -321,25 +325,25 @@ const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
                             : '/images/Box.png'
                         }
                         alt="Song Box"
-                        className="w-full h-[200px] object-fill select-none pointer-events-none"
+                        className={`w-full ${isSolo ? 'h-[150px]' : 'h-[120px]'} object-fill select-none pointer-events-none`}
                         draggable={false}
                       />
 
-                      {/* Text overlay kept inside the box */}
-                      <div className="absolute inset-0 flex items-center translate-y-2">
-                        <div className="w-full px-10 md:px-10 lg:px-16">
+                      {/* Text overlay kept inside the box (compact typography) */}
+                      <div className="absolute inset-0 flex items-center translate-y-1">
+                        <div className="w-full px-6 md:px-6 lg:px-8">
                           <div className=" items-center justify-between">
                             <div className="min-w-0">
-                              <h3 className="font-minecraftia text-white text-2xl leading-tight drop-shadow">
+                              <h3 className={`font-minecraftia text-white ${isSolo ? 'text-2xl' : 'text-xl'} leading-tight drop-shadow`}>
                                 {songItem.title}
                               </h3>
-                              <div className="font-minecraftia text-cyan-300 text-sm mt-1 drop-shadow">
+                              <div className={`font-minecraftia text-cyan-300 ${isSolo ? 'text-sm' : 'text-xs'} mt-1 drop-shadow`}>
                                 {songItem.bpm} BPM
                               </div>
                             </div>
 
                             <span
-                              className={`shrink-0 px-3 py-1 rounded-full text-xs font-bold ${
+                              className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                 songItem.difficulty === 'Easy'
                                   ? 'text-green-400'
                                   : songItem.difficulty === 'Medium'
@@ -366,54 +370,107 @@ const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
             </div>
           </div>
 
-          {/* Ready Status Panel - Right Side (Multiplayer Only) */}
+          {/* Player 2 Character - Right (only visible in multiplayer; placeholder in solo to keep center) */}
           {lobby.mode !== 'solo' && (
-            <div className="flex-shrink-0 w-80">
-              <GraffitiPanel variant="outlined">
-                <h3 className="text-2xl font-bold text-white mb-4">READY STATUS</h3>
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <h4 className={`text-lg font-bold mb-2 ${lobby.side !== 'blue' ? 'text-pink-400' : 'text-cyan-400'}`}>PLAYER {lobby.side !== 'blue' ? 1 : 2}</h4>
-                    <div className={`text-2xl font-bold ${(lobby.side !== 'blue' ? lobby.p1Ready : lobby.p2Ready) ? 'text-green-400' : 'text-yellow-400'}`}>
-                      {(lobby.side !== 'blue' ? lobby.p1Ready : lobby.p2Ready) ? '✓ READY' : '⏳ NOT READY'}
-                    </div>
-                    <button
-                      onClick={() => toggleReady(lobby.side !== 'blue' ? 1 : 2)}
-                      className={`mt-2 px-4 py-2 rounded-lg font-bold transition-all ${
-                        (lobby.side !== 'blue' ? lobby.p1Ready : lobby.p2Ready) 
-                          ? 'bg-red-500 hover:bg-red-600 text-white' 
-                          : 'bg-green-500 hover:bg-green-600 text-white'
-                      }`}
-                    >
-                      {(lobby.side !== 'blue' ? lobby.p1Ready : lobby.p2Ready) ? 'UNREADY' : 'READY UP'}
-                    </button>
-                  </div>
-                  <div className="text-center">
-                    <h4 className={`text-lg font-bold mb-2 ${lobby.side !== 'blue' ? 'text-cyan-400' : 'text-pink-400'}`}>PLAYER {lobby.side !== 'blue' ? 2 : 1}</h4>
-                    <div className={`text-2xl font-bold ${(lobby.side !== 'blue' ? lobby.p2Ready : lobby.p1Ready) ? 'text-green-400' : 'text-yellow-400'}`}>
-                      {(lobby.side !== 'blue' ? lobby.p2Ready : lobby.p1Ready) ? '✓ READY' : '⏳ NOT READY'}
-                    </div>
-                    <button
-                      disabled
-                      className="mt-2 px-4 py-2 rounded-lg font-bold transition-all bg-gray-600 text-white cursor-not-allowed"
-                      title="Only Player 2 can change their own ready"
-                    >
-                      OPPONENT CONTROLS THEIR READY
-                    </button>
-                  </div>
-                </div>
-                {lobby.p1Ready && lobby.p2Ready && (
-                  <div className="mt-4 text-green-400 font-bold text-lg animate-pulse text-center">
-                    🎮 BOTH PLAYERS READY! 🎮
+            <div className="flex-shrink-0 mt-6">
+              <div className="flex flex-col items-center">
+                <div className="text-sm font-bold text-cyan-400 mb-1">PLAYER 2</div>
+                {!lobby.connectedP2 ? (
+                  <img
+                    src="/images/characters/Untitled%20design(1).png"
+                    alt="No Player Connected"
+                    className="w-[26rem] h-[26rem] object-contain select-none"
+                    draggable={false}
+                  />
+                ) : CHARACTERS[p2CharIndex]?.image ? (
+                  <img
+                    src={CHARACTERS[p2CharIndex].image!}
+                    alt={CHARACTERS[p2CharIndex].name}
+                    className="w-[26rem] h-[26rem] object-contain select-none"
+                    draggable={false}
+                  />
+                ) : (
+                  <div className="w-[26rem] h-[26rem] flex items-center justify-center text-gray-300">
+                    No Image
                   </div>
                 )}
-              </GraffitiPanel>
+                {lobby.connectedP2 ? (
+                  <>
+                    <div className="mt-3 text-center">
+                      <div className="text-base text-gray-200 tracking-wide">CHARACTER</div>
+                      <div className="text-3xl font-bold text-white">{CHARACTERS[p2CharIndex]?.name}</div>
+                    </div>
+                    <div className="text-cyan-300 text-sm mt-1">POWER {CHARACTERS[p2CharIndex]?.power} • SPEED {CHARACTERS[p2CharIndex]?.speed} • STYLE {CHARACTERS[p2CharIndex]?.style}</div>
+                  </>
+                ) : (
+                  <div className="mt-3 text-center text-white/80 text-sm">Waiting for Player 2…</div>
+                )}
+                <div className={`mt-2 text-sm font-bold ${lobby.p2Ready ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {lobby.p2Ready ? 'READY' : 'NOT READY'}
+                </div>
+              </div>
             </div>
+          )}
+          {lobby.mode === 'solo' && (
+            <div className="flex-shrink-0 mt-6 w-[26rem]" />
           )}
         </div>
 
+    {/* Bottom Multiplayer Bar */}
+        {lobby.mode !== 'solo' && (
+          <div className="mt-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+              {/* Host/Room */}
+              <GraffitiPanel className="bg-red-900 text-white" variant="flat">
+                <div className="text-left">
+                  <h3 className="text-xl font-bold text-white mb-2">MULTIPLAYER LOBBY</h3>
+                  {!lobby.code && (
+                    <div className={`text-xs mb-2 ${netConnected ? 'text-green-400' : netError ? 'text-red-400' : 'text-yellow-300'}`}>
+                      {netConnected ? 'Connected to server' : netError ? `Connection error: ${netError}` : 'Connecting to server…'}
+                    </div>
+                  )}
+                  {lobby.code ? (
+                    <div className="text-center">
+                      <div className="text-white/90 text-sm">ROOM CODE</div>
+                      <div className="text-white font-minecraftia text-3xl font-black tracking-widest">{lobby.code}</div>
+                    </div>
+                  ) : (
+                    <NeonButton variant="flat-yellow" className="text-white" onClick={hostLobby} disabled={!netConnected}>CREATE ROOM</NeonButton>
+                  )}
+                </div>
+              </GraffitiPanel>
+
+              {/* Join */}
+              <GraffitiPanel className="bg-red-900 text-white" variant="flat">
+                <div className="text-left">
+                  <h3 className="text-xl font-bold text-white mb-2">JOIN LOBBY</h3>
+          <p className="text-white/90 mb-3 text-sm">Enter a 6-character code</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={joinCode}
+                      onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                      maxLength={6}
+                      placeholder="ENTER CODE"
+                      className="w-44 px-3 py-2 bg-gray-800 border-2 border-cyan-400/50 rounded text-white font-minecraftia text-sm focus:outline-none focus:border-cyan-400"
+                    />
+                    <NeonButton
+                      variant="flat-yellow"
+                      className="text-white"
+                      disabled={joinCode.length !== 6 || !netConnected}
+                      onClick={() => joinLobby(joinCode)}
+                    >JOIN</NeonButton>
+                  </div>
+                  {!netConnected && (
+                    <div className="text-xs text-yellow-300 mt-2">Waiting for server connection…</div>
+                  )}
+                </div>
+              </GraffitiPanel>
+            </div>
+          </div>
+        )}
         {/* Controls */}
-        <div className="flex justify-between items-center text-gray-800 text-sm arcade-text">
+  <div className="flex justify-between items-center text-gray-800 text-sm font-minecraftia">
           <div>
             <div>[↑↓ TO NAVIGATE]</div>
             <div>[TAB TO SWITCH FOCUS]</div>
