@@ -23,6 +23,12 @@ export type Lobby = {
   red_count: number,
   blue_count: number,
   created: Timestamp,
+  // Extended multiplayer state (must match server)
+  red_char: string | undefined,
+  blue_char: string | undefined,
+  red_ready: boolean,
+  blue_ready: boolean,
+  song_id: string | undefined,
 };
 
 export namespace Lobby {
@@ -34,6 +40,11 @@ export namespace Lobby {
       new ProductTypeElement("red_count", AlgebraicType.createU32Type()),
       new ProductTypeElement("blue_count", AlgebraicType.createU32Type()),
       new ProductTypeElement("created", AlgebraicType.createTimestampType()),
+  new ProductTypeElement("red_char", AlgebraicType.createOptionType(AlgebraicType.createStringType())),
+  new ProductTypeElement("blue_char", AlgebraicType.createOptionType(AlgebraicType.createStringType())),
+  new ProductTypeElement("red_ready", AlgebraicType.createBoolType()),
+  new ProductTypeElement("blue_ready", AlgebraicType.createBoolType()),
+  new ProductTypeElement("song_id", AlgebraicType.createOptionType(AlgebraicType.createStringType())),
     ]);
   }
 

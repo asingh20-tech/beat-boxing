@@ -67,6 +67,12 @@ export const LobbyApi = {
   join(conn: DbConnection, code: string) { (conn as any).reducers.joinLobby(code); },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   increment(conn: DbConnection, code: string) { (conn as any).reducers.increment(code); },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setCharacter(conn: DbConnection, code: string, character: string) { (conn as any).reducers.callReducer?.("set_character", undefined, undefined); (conn as any).reducers.setCharacter?.(code, character); },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setReady(conn: DbConnection, code: string, ready: boolean) { (conn as any).reducers.setReady?.(code, ready); },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setSong(conn: DbConnection, code: string, songId: string) { (conn as any).reducers.setSong?.(code, songId); },
 };
 
 export function subscribeLobby(code: string, onChange: (row: Lobby | null) => void): () => void {

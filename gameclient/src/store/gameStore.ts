@@ -129,9 +129,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (mode === 'multiplayer') {
   // Flip to multiplayer immediately so Song Select renders the lobby UI
   set((state) => ({ lobby: { ...state.lobby, mode: 'host', code: null, connectedP2: false, p1Ready: false, p2Ready: false, redPresent: false, bluePresent: false } }));
-  // Kick off SpaceTimeDB connection in the background
-  const saved = localStorage.getItem('auth_token') || undefined;
-  void connectSpacetime(saved).then(({ connected, error }) => set({ netConnected: connected, netError: error ?? null }));
+  // Open SpaceTimeDB connection if not already created
+  if (!getConn()) {
+    const saved = localStorage.getItem('auth_token') || undefined;
+    void connectSpacetime(saved).then(({ connected, error }) => set({ netConnected: connected, netError: error ?? null }));
+  } else {
+    set({ netConnected: true, netError: null });
+  }
     } else {
       set((state) => ({
         lobby: {
@@ -149,14 +153,17 @@ export const useGameStore = create<GameState>((set, get) => ({
   hostLobby: () => {
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     console.log('LobbyHosted', { code });
-  const conn = getConn();
-    if (!conn) {
+    const conn = getConn();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const doCreate = (c: any) => { try { LobbyApi.create(c, code); } catch (e) { console.warn('Create reducer failed', e); } };
+    if (conn && get().netConnected) {
+      doCreate(conn);
+    } else {
       const saved = localStorage.getItem('auth_token') || undefined;
       void connectSpacetime(saved).then((st) => {
-        if (st.conn) LobbyApi.create(st.conn, code);
+        set({ netConnected: st.connected, netError: st.error });
+        if (st.conn && st.connected) doCreate(st.conn);
       });
-    } else {
-      LobbyApi.create(conn, code);
     }
     set((state) => ({
       lobby: {
@@ -185,14 +192,17 @@ export const useGameStore = create<GameState>((set, get) => ({
   
   joinLobby: (code) => {
     console.log('LobbyJoined', { code });
-  const conn = getConn();
-    if (!conn) {
+    const conn = getConn();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const doJoin = (c: any) => { try { LobbyApi.join(c, code); } catch (e) { console.warn('Join reducer failed', e); } };
+    if (conn && get().netConnected) {
+      doJoin(conn);
+    } else {
       const saved = localStorage.getItem('auth_token') || undefined;
       void connectSpacetime(saved).then((st) => {
-        if (st.conn) LobbyApi.join(st.conn, code);
+        set({ netConnected: st.connected, netError: st.error });
+        if (st.conn && st.connected) doJoin(st.conn);
       });
-    } else {
-      LobbyApi.join(conn, code);
     }
     set((state) => ({
       lobby: {

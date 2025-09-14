@@ -44,6 +44,13 @@ import { JoinLobby } from "./join_lobby_reducer.ts";
 export { JoinLobby };
 import { Increment } from "./increment_reducer.ts";
 export { Increment };
+// Extended reducers
+import { SetCharacter } from "./set_character_reducer.ts";
+export { SetCharacter };
+import { SetReady } from "./set_ready_reducer.ts";
+export { SetReady };
+import { SetSong } from "./set_song_reducer.ts";
+export { SetSong };
 
 // Import and reexport all table handle types
 import { LobbyTableHandle } from "./lobby_table.ts";
@@ -99,6 +106,18 @@ const REMOTE_MODULE = {
       reducerName: "increment",
       argsType: Increment.getTypeScriptAlgebraicType(),
     },
+    set_character: {
+      reducerName: "set_character",
+      argsType: SetCharacter.getTypeScriptAlgebraicType(),
+    },
+    set_ready: {
+      reducerName: "set_ready",
+      argsType: SetReady.getTypeScriptAlgebraicType(),
+    },
+    set_song: {
+      reducerName: "set_song",
+      argsType: SetSong.getTypeScriptAlgebraicType(),
+    },
   },
   versionInfo: {
     cliVersion: "1.3.2",
@@ -126,6 +145,9 @@ export type Reducer = never
 | { name: "CreateLobby", args: CreateLobby }
 | { name: "JoinLobby", args: JoinLobby }
 | { name: "Increment", args: Increment }
+| { name: "SetCharacter", args: SetCharacter }
+| { name: "SetReady", args: SetReady }
+| { name: "SetSong", args: SetSong }
 ;
 
 export class RemoteReducers {
@@ -212,6 +234,12 @@ export class SetReducerFlags {
   increment(flags: CallReducerFlags) {
     this.incrementFlags = flags;
   }
+  setCharacterFlags: CallReducerFlags = 'FullUpdate';
+  setCharacter(flags: CallReducerFlags) { this.setCharacterFlags = flags; }
+  setReadyFlags: CallReducerFlags = 'FullUpdate';
+  setReady(flags: CallReducerFlags) { this.setReadyFlags = flags; }
+  setSongFlags: CallReducerFlags = 'FullUpdate';
+  setSong(flags: CallReducerFlags) { this.setSongFlags = flags; }
 
 }
 
