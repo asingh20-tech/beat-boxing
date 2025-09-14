@@ -43,7 +43,7 @@ export interface Gameplay {
 }
 
 export interface GameState {
-  currentScreen: 'TITLE' | 'HOME' | 'MODE_SELECT' | 'SONG_SELECT' | 'GAME' | 'HOW_TO_PLAY' | 'SETTINGS';
+  currentScreen: 'TITLE' | 'HOME' | 'SONG_SELECT' | 'GAME' | 'HOW_TO_PLAY' | 'SETTINGS';
   song: Song | null;
   players: {
     p1: Player;
@@ -121,13 +121,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   
   setMode: (mode) => {
     if (mode === 'multiplayer') {
-      // Ensure connection up front
-      const saved = localStorage.getItem('auth_token') || undefined;
-      connectSpacetime(saved).then(({ conn }) => {
-        if (!conn) return;
-        // We'll actually host on hostLobby; here we just go forward
-        set((state) => ({ lobby: { ...state.lobby, mode: 'host' } }));
-      });
+  // Flip to multiplayer immediately so Song Select renders the lobby UI
+  set((state) => ({ lobby: { ...state.lobby, mode: 'host', code: null, connectedP2: false, p1Ready: false, p2Ready: false } }));
+  // Kick off SpaceTimeDB connection in the background
+  const saved = localStorage.getItem('auth_token') || undefined;
+  void connectSpacetime(saved);
     } else {
       set((state) => ({
         lobby: {

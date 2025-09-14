@@ -498,7 +498,7 @@ export const SongSelectScreen: React.FC = () => {
           
           <NeonButton
             variant="secondary"
-            onClick={() => { playSelectSfx(); setScreen('MODE_SELECT'); }}
+            onClick={() => { playSelectSfx(); setScreen('HOME'); }}
           >
             ← BACK
           </NeonButton>

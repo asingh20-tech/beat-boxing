@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { useGameStore } from './store/gameStore';
 import { TitleScreen } from './screens/TitleScreen';
 import { HomeScreen } from './screens/HomeScreen';
-import { ModeSelectScreen } from './screens/ModeSelectScreen';
 import { SongSelectScreen } from './screens/SongSelectScreen';
 import { GameScreen } from './screens/GameScreen';
 import { HowToPlayScreen } from './screens/HowToPlayScreen';
@@ -56,7 +55,7 @@ function App() {
     switch (currentScreen) {
       case 'TITLE': return <TitleScreen />;
       case 'HOME': return <HomeScreen />;
-      case 'MODE_SELECT': return <ModeSelectScreen />;
+  // MODE_SELECT removed; Multiplayer flows start in Song Select
       case 'SONG_SELECT': return <SongSelectScreen />;
       case 'GAME': return <GameScreen />;
       case 'HOW_TO_PLAY': return <HowToPlayScreen />;

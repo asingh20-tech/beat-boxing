@@ -116,7 +116,7 @@ export const CharacterSelectScreen: React.FC = () => {
           <NeonButton
             variant="primary"
             disabled={!players.p1.characterId}
-            onClick={() => setScreen('MODE_SELECT')}
+            onClick={() => setScreen('SONG_SELECT')}
           >
             NEXT →
           </NeonButton>
