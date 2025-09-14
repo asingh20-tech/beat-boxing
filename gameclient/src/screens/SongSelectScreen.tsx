@@ -337,30 +337,32 @@ export const SongSelectScreen: React.FC = () => {
                 <h3 className="text-2xl font-bold text-white mb-4">READY STATUS</h3>
                 <div className="space-y-6">
                   <div className="text-center">
-                    <h4 className="text-lg font-bold text-pink-400 mb-2">PLAYER 1</h4>
-                    <div className={`text-2xl font-bold ${lobby.p1Ready ? 'text-green-400' : 'text-yellow-400'}`}>
-                      {lobby.p1Ready ? '✓ READY' : '⏳ NOT READY'}
+                    <h4 className={`text-lg font-bold mb-2 ${lobby.side !== 'blue' ? 'text-pink-400' : 'text-cyan-400'}`}>PLAYER {lobby.side !== 'blue' ? 1 : 2}</h4>
+                    <div className={`text-2xl font-bold ${(lobby.side !== 'blue' ? lobby.p1Ready : lobby.p2Ready) ? 'text-green-400' : 'text-yellow-400'}`}>
+                      {(lobby.side !== 'blue' ? lobby.p1Ready : lobby.p2Ready) ? '✓ READY' : '⏳ NOT READY'}
                     </div>
                     <button
-                      onClick={() => toggleReady(1)}
+                      onClick={() => toggleReady(lobby.side !== 'blue' ? 1 : 2)}
                       className={`mt-2 px-4 py-2 rounded-lg font-bold transition-all ${
-                        lobby.p1Ready ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'
+                        (lobby.side !== 'blue' ? lobby.p1Ready : lobby.p2Ready) 
+                          ? 'bg-red-500 hover:bg-red-600 text-white' 
+                          : 'bg-green-500 hover:bg-green-600 text-white'
                       }`}
                     >
-                      {lobby.p1Ready ? 'UNREADY' : 'READY UP'}
+                      {(lobby.side !== 'blue' ? lobby.p1Ready : lobby.p2Ready) ? 'UNREADY' : 'READY UP'}
                     </button>
                   </div>
                   <div className="text-center">
-                    <h4 className="text-lg font-bold text-cyan-400 mb-2">PLAYER 2</h4>
-                    <div className={`text-2xl font-bold ${lobby.p2Ready ? 'text-green-400' : 'text-yellow-400'}`}>
-                      {lobby.p2Ready ? '✓ READY' : '⏳ NOT READY'}
+                    <h4 className={`text-lg font-bold mb-2 ${lobby.side !== 'blue' ? 'text-cyan-400' : 'text-pink-400'}`}>PLAYER {lobby.side !== 'blue' ? 2 : 1}</h4>
+                    <div className={`text-2xl font-bold ${(lobby.side !== 'blue' ? lobby.p2Ready : lobby.p1Ready) ? 'text-green-400' : 'text-yellow-400'}`}>
+                      {(lobby.side !== 'blue' ? lobby.p2Ready : lobby.p1Ready) ? '✓ READY' : '⏳ NOT READY'}
                     </div>
                     <button
                       disabled
                       className="mt-2 px-4 py-2 rounded-lg font-bold transition-all bg-gray-600 text-white cursor-not-allowed"
                       title="Only Player 2 can change their own ready"
                     >
-                      P2 CONTROLS THEIR READY
+                      OPPONENT CONTROLS THEIR READY
                     </button>
                   </div>
                 </div>

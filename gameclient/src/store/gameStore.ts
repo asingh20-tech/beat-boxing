@@ -188,6 +188,8 @@ export const useGameStore = create<GameState>((set, get) => ({
           bluePresent: !!row?.blue,
           // host stays red; we don't flip sides here
           side: state.lobby.side,
+          p1Ready: row?.red_ready ?? state.lobby.p1Ready,
+          p2Ready: row?.blue_ready ?? state.lobby.p2Ready,
         }
       }));
     });
@@ -229,7 +231,9 @@ export const useGameStore = create<GameState>((set, get) => ({
           redPresent: !!row?.red,
           bluePresent: !!row?.blue,
       // joiner stays blue; we don't flip sides here
-      side: state.lobby.side,
+  side: state.lobby.side,
+  p1Ready: row?.red_ready ?? state.lobby.p1Ready,
+  p2Ready: row?.blue_ready ?? state.lobby.p2Ready,
         }
       }));
     });
