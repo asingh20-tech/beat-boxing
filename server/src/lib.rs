@@ -25,6 +25,10 @@ pub struct Lobby {
     red_ready: bool,
     blue_ready: bool,
     song_id: Option<String>,
+    // Match state and live stats
+    started: bool,
+    red_score: u32,
+    blue_score: u32,
 }
 
 fn validate_code(code: &str) -> Result<(), String> {
@@ -52,6 +56,9 @@ pub fn create_lobby(ctx: &ReducerContext, code: String) -> Result<(), String> {
     red_ready: false,
     blue_ready: false,
     song_id: None,
+    started: false,
+    red_score: 0,
+    blue_score: 0,
     });
     Ok(())
 }
@@ -148,15 +155,25 @@ pub fn set_character(ctx: &ReducerContext, code: String, character: String) -> R
 pub fn set_ready(ctx: &ReducerContext, code: String, ready: bool) -> Result<(), String> {
     let code_up = code.to_uppercase();
     if let Some(lobby) = ctx.db.lobby().code().find(&code_up) {
-        if lobby.red == Some(ctx.sender) {
-            ctx.db.lobby().code().update(Lobby { red_ready: ready, ..lobby });
-            Ok(())
+        // Compute new ready flags based on who toggled
+        let (new_red_ready, new_blue_ready) = if lobby.red == Some(ctx.sender) {
+            (ready, lobby.blue_ready)
         } else if lobby.blue == Some(ctx.sender) {
-            ctx.db.lobby().code().update(Lobby { blue_ready: ready, ..lobby });
-            Ok(())
+            (lobby.red_ready, ready)
         } else {
-            Err("You are not a member of this lobby".into())
-        }
+            return Err("You are not a member of this lobby".into());
+        };
+
+        // Determine if match should be started (both ready and song selected)
+        let should_start = new_red_ready && new_blue_ready && lobby.song_id.is_some();
+
+        ctx.db.lobby().code().update(Lobby {
+            red_ready: new_red_ready,
+            blue_ready: new_blue_ready,
+            started: should_start,
+            ..lobby
+        });
+        Ok(())
     } else { Err("Lobby not found".into()) }
 }
 
@@ -165,8 +182,43 @@ pub fn set_song(ctx: &ReducerContext, code: String, song_id: String) -> Result<(
     let code_up = code.to_uppercase();
     if song_id.trim().is_empty() { return Err("Song id must not be empty".into()); }
     if let Some(lobby) = ctx.db.lobby().code().find(&code_up) {
-        ctx.db.lobby().code().update(Lobby { song_id: Some(song_id), ..lobby });
+        // Updating the song resets started state and scores
+        ctx.db.lobby().code().update(Lobby { song_id: Some(song_id), started: false, red_score: 0, blue_score: 0, ..lobby });
         Ok(())
+    } else { Err("Lobby not found".into()) }
+}
+
+#[reducer]
+pub fn start_match(ctx: &ReducerContext, code: String) -> Result<(), String> {
+    let code_up = code.to_uppercase();
+    if let Some(lobby) = ctx.db.lobby().code().find(&code_up) {
+        // Only allow members to start and require both ready and song selected
+        if lobby.red == Some(ctx.sender) || lobby.blue == Some(ctx.sender) {
+            if lobby.red_ready && lobby.blue_ready && lobby.song_id.is_some() {
+                ctx.db.lobby().code().update(Lobby { started: true, ..lobby });
+                Ok(())
+            } else {
+                Err("Both players must be ready and a song selected".into())
+            }
+        } else {
+            Err("You are not a member of this lobby".into())
+        }
+    } else { Err("Lobby not found".into()) }
+}
+
+#[reducer]
+pub fn set_score(ctx: &ReducerContext, code: String, score: u32) -> Result<(), String> {
+    let code_up = code.to_uppercase();
+    if let Some(lobby) = ctx.db.lobby().code().find(&code_up) {
+        if lobby.red == Some(ctx.sender) {
+            ctx.db.lobby().code().update(Lobby { red_score: score, ..lobby });
+            Ok(())
+        } else if lobby.blue == Some(ctx.sender) {
+            ctx.db.lobby().code().update(Lobby { blue_score: score, ..lobby });
+            Ok(())
+        } else {
+            Err("You are not a member of this lobby".into())
+        }
     } else { Err("Lobby not found".into()) }
 }
 
