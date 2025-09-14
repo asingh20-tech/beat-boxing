@@ -16,10 +16,22 @@ export const SettingsScreen: React.FC = () => {
       gainNode.gain.value = volume;
     }
   };
-  
+
+  React.useEffect(() => {
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      setScreen('TITLE');
+    }
+  };
+  document.addEventListener('keydown', handleKeyDown);
+  return () => document.removeEventListener('keydown', handleKeyDown);
+}, [setScreen]);
+
   return (
-    <div className="min-h-screen brick-wall p-8 relative">
-      <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-purple-900/50 to-black/70"></div>
+    <div
+      className="min-h-screen bg-cover bg-center p-8 relative"
+      style={{ backgroundImage: "url('/images/HomeBackground.jpeg')" }}
+    >
       <div className="max-w-2xl mx-auto">
         {/* Settings Panel */}
         <GraffitiPanel className="mb-8">
@@ -56,16 +68,6 @@ export const SettingsScreen: React.FC = () => {
             </div>
           </div>
         </GraffitiPanel>
-        
-        {/* Navigation */}
-        <div className="flex justify-center">
-          <NeonButton
-            variant="secondary"
-            onClick={() => setScreen('TITLE')}
-          >
-            ← BACK TO MENU
-          </NeonButton>
-        </div>
       </div>
       
       <style>{`

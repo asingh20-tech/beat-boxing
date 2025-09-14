@@ -313,7 +313,11 @@ export const SongSelectScreen: React.FC = () => {
                     >
                       {/* Box art */}
                       <img
-                        src="/images/Box.png"
+                        src={
+                          selectedSongIndex === index && focusMode === 'song'
+                            ? '/images/BoxSelected.png'
+                            : '/images/Box.png'
+                        }
                         alt="Song Box"
                         className="w-full h-[200px] object-fill select-none pointer-events-none"
                         draggable={false}
