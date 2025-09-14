@@ -31,6 +31,11 @@ export const SongSelectScreen: React.FC = () => {
   const currentSongRef = useRef<string>('');
   const [joinCode, setJoinCode] = useState('');
 
+  // Determine local and other player based on side
+  const isLocalP1 = lobby.side !== 'blue';
+  const localPlayer: 1 | 2 = isLocalP1 ? 1 : 2;
+  const otherPlayer: 1 | 2 = isLocalP1 ? 2 : 1;
+
   const playPreview = useCallback((songItem: Song) => {
     // Stop current preview if playing
     if (previewAudio && currentSongRef.current !== songItem.id) {
@@ -184,7 +189,7 @@ export const SongSelectScreen: React.FC = () => {
           if (focusMode === 'song' || focusMode === 'character') {
             if (lobby.mode !== 'solo') {
               playSelectSfx();
-              toggleReady(1);
+              toggleReady(localPlayer);
             } else if (canStart()) {
               playSelectSfx();
               startMatch();
@@ -199,7 +204,7 @@ export const SongSelectScreen: React.FC = () => {
           event.preventDefault();
           if (lobby.mode !== 'solo') {
             playSelectSfx();
-            toggleReady(1);
+            toggleReady(localPlayer);
           }
           break;
         }
@@ -214,7 +219,7 @@ export const SongSelectScreen: React.FC = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedSongIndex, selectedCharIndex, focusMode, selectSong, selectCharacter, startMatch, setScreen, songs, lobby.mode, toggleReady, canStart, playPreview]);
+  }, [selectedSongIndex, selectedCharIndex, focusMode, selectSong, selectCharacter, startMatch, setScreen, songs, lobby.mode, toggleReady, canStart, playPreview, localPlayer]);
 
   const getDifficultyColor = (difficulty: Song['difficulty']) => {
     switch (difficulty) {
@@ -298,9 +303,9 @@ export const SongSelectScreen: React.FC = () => {
                 FIGHTER {focusMode === 'character' && <span className="text-cyan-400">[FOCUSED]</span>}
               </h2>
               
-              {/* Player 1 Character */}
+              {/* Local Player Character */}
               <div className="mb-6">
-                <h3 className="text-lg font-bold text-pink-400 mb-4">PLAYER 1</h3>
+                <h3 className={`text-lg font-bold mb-4 ${isLocalP1 ? 'text-pink-400' : 'text-cyan-400'}`}>PLAYER {localPlayer}</h3>
                 <div className="space-y-3">
                   {CHARACTERS.map((char, index) => (
                     <div
@@ -308,13 +313,13 @@ export const SongSelectScreen: React.FC = () => {
                       className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
                         selectedCharIndex === index && focusMode === 'character'
                           ? 'border-pink-500 bg-pink-500/20 scale-105'
-                          : players.p1.characterId === char.id
+                          : (localPlayer === 1 ? players.p1.characterId === char.id : players.p2.characterId === char.id)
                           ? 'border-cyan-400 bg-cyan-400/10'
                           : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
                       }`}
                       onClick={() => {
                         setSelectedCharIndex(index);
-                        selectCharacter(1, char.id);
+                        selectCharacter(localPlayer, char.id);
                         playNavSfx();
                       }}
                     >
@@ -341,28 +346,28 @@ export const SongSelectScreen: React.FC = () => {
                 </div>
               </div>
               
-              {/* Player 2 Character (always shown in multiplayer with presence indicator) */}
+              {/* Other Player Character (always shown in multiplayer with presence indicator) */}
               {lobby.mode !== 'solo' && (
                 <div>
-                  <h3 className="text-lg font-bold text-cyan-400 mb-4">PLAYER 2</h3>
+                  <h3 className={`text-lg font-bold mb-4 ${isLocalP1 ? 'text-cyan-400' : 'text-pink-400'}`}>PLAYER {otherPlayer}</h3>
                   <div className="p-3 rounded-lg border-2 border-cyan-400 bg-cyan-400/10">
-                    {lobby.connectedP2 && players.p2.characterId ? (
+                    {lobby.connectedP2 && ((otherPlayer === 1 ? players.p1.characterId : players.p2.characterId)) ? (
                       <div className="flex items-center space-x-3">
                         <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center">
                           <span className="text-xl">👤</span>
                         </div>
                         <div>
                           <div className="font-bold text-white text-sm">
-                            {CHARACTERS.find(c => c.id === players.p2.characterId)?.name || 'UNKNOWN'}
+                            {CHARACTERS.find(c => c.id === (otherPlayer === 1 ? players.p1.characterId : players.p2.characterId))?.name || 'UNKNOWN'}
                           </div>
-                          <div className={`text-xs font-bold ${lobby.p2Ready ? 'text-green-400' : 'text-yellow-400'}`}>
-                            {lobby.p2Ready ? 'READY' : 'NOT READY'}
+                          <div className={`text-xs font-bold ${ (otherPlayer === 2 ? lobby.p2Ready : lobby.p1Ready) ? 'text-green-400' : 'text-yellow-400'}`}>
+                            { (otherPlayer === 2 ? lobby.p2Ready : lobby.p1Ready) ? 'READY' : 'NOT READY'}
                           </div>
                         </div>
                       </div>
                     ) : (
                       <div className="text-center text-gray-400">
-                        <div className="animate-pulse">{lobby.connectedP2 ? 'P2 selecting…' : 'Waiting for P2 to join…'}</div>
+                        <div className="animate-pulse">{lobby.connectedP2 ? 'Opponent selecting…' : 'Waiting for opponent to join…'}</div>
                       </div>
                     )}
                   </div>
