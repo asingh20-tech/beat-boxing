@@ -217,6 +217,54 @@ export class RemoteReducers {
     this.connection.offReducer("increment", callback);
   }
 
+  setCharacter(code: string, character: string) {
+    const __args = { code, character };
+    let __writer = new BinaryWriter(1024);
+    SetCharacter.getTypeScriptAlgebraicType().serialize(__writer, __args);
+    let __argsBuffer = __writer.getBuffer();
+    this.connection.callReducer("set_character", __argsBuffer, this.setCallReducerFlags.setCharacterFlags);
+  }
+
+  onSetCharacter(callback: (ctx: ReducerEventContext, code: string, character: string) => void) {
+    this.connection.onReducer("set_character", callback);
+  }
+
+  removeOnSetCharacter(callback: (ctx: ReducerEventContext, code: string, character: string) => void) {
+    this.connection.offReducer("set_character", callback);
+  }
+
+  setReady(code: string, ready: boolean) {
+    const __args = { code, ready };
+    let __writer = new BinaryWriter(1024);
+    SetReady.getTypeScriptAlgebraicType().serialize(__writer, __args);
+    let __argsBuffer = __writer.getBuffer();
+    this.connection.callReducer("set_ready", __argsBuffer, this.setCallReducerFlags.setReadyFlags);
+  }
+
+  onSetReady(callback: (ctx: ReducerEventContext, code: string, ready: boolean) => void) {
+    this.connection.onReducer("set_ready", callback);
+  }
+
+  removeOnSetReady(callback: (ctx: ReducerEventContext, code: string, ready: boolean) => void) {
+    this.connection.offReducer("set_ready", callback);
+  }
+
+  setSong(code: string, song_id: string) {
+    const __args = { code, song_id };
+    let __writer = new BinaryWriter(1024);
+    SetSong.getTypeScriptAlgebraicType().serialize(__writer, __args);
+    let __argsBuffer = __writer.getBuffer();
+    this.connection.callReducer("set_song", __argsBuffer, this.setCallReducerFlags.setSongFlags);
+  }
+
+  onSetSong(callback: (ctx: ReducerEventContext, code: string, song_id: string) => void) {
+    this.connection.onReducer("set_song", callback);
+  }
+
+  removeOnSetSong(callback: (ctx: ReducerEventContext, code: string, song_id: string) => void) {
+    this.connection.offReducer("set_song", callback);
+  }
+
 }
 
 export class SetReducerFlags {
