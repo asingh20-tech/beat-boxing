@@ -21,6 +21,8 @@ export interface Lobby {
   connectedP2: boolean;
   p1Ready: boolean;
   p2Ready: boolean;
+  redPresent?: boolean;
+  bluePresent?: boolean;
 }
 
 export interface Settings {
@@ -52,6 +54,8 @@ export interface GameState {
   lobby: Lobby;
   settings: Settings;
   gameplay: Gameplay;
+  netConnected?: boolean;
+  netError?: string | null;
   
   // Actions
   setScreen: (screen: GameState['currentScreen']) => void;
@@ -80,6 +84,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     connectedP2: false,
     p1Ready: false,
     p2Ready: false,
+  redPresent: false,
+  bluePresent: false,
   },
   settings: {
     volume: 0.8,
@@ -122,10 +128,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   setMode: (mode) => {
     if (mode === 'multiplayer') {
   // Flip to multiplayer immediately so Song Select renders the lobby UI
-  set((state) => ({ lobby: { ...state.lobby, mode: 'host', code: null, connectedP2: false, p1Ready: false, p2Ready: false } }));
+  set((state) => ({ lobby: { ...state.lobby, mode: 'host', code: null, connectedP2: false, p1Ready: false, p2Ready: false, redPresent: false, bluePresent: false } }));
   // Kick off SpaceTimeDB connection in the background
   const saved = localStorage.getItem('auth_token') || undefined;
-  void connectSpacetime(saved);
+  void connectSpacetime(saved).then(({ connected, error }) => set({ netConnected: connected, netError: error ?? null }));
     } else {
       set((state) => ({
         lobby: {
@@ -167,6 +173,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         lobby: {
           ...state.lobby,
           connectedP2: !!row?.red && !!row?.blue,
+          redPresent: !!row?.red,
+          bluePresent: !!row?.blue,
         }
       }));
     });
@@ -201,6 +209,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         lobby: {
           ...state.lobby,
           connectedP2: !!row?.red && !!row?.blue,
+          redPresent: !!row?.red,
+          bluePresent: !!row?.blue,
         }
       }));
     });

@@ -24,7 +24,7 @@ export async function connectSpacetime(savedToken?: string): Promise<SpacetimeSt
       .withModuleName(moduleName)
       .withToken(savedToken)
       .onConnect((c: DbConnection, id: unknown, token: string) => {
-        try { localStorage.setItem('auth_token', token); } catch (e) { /* ignore quota/unavailable */ }
+        try { localStorage.setItem('auth_token', token); } catch { /* ignore quota/unavailable */ }
         state.conn = c;
         state.identity = id;
         state.connected = true;
@@ -61,37 +61,43 @@ export function getConn(): DbConnection | null { return currentConn; }
 export function getIdentity(): unknown | null { return currentIdentity; }
 
 export const LobbyApi = {
-  create(conn: DbConnection, code: string) { conn.reducers.createLobby(code); },
-  join(conn: DbConnection, code: string) { conn.reducers.joinLobby(code); },
-  increment(conn: DbConnection, code: string) { conn.reducers.increment(code); },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  create(conn: DbConnection, code: string) { (conn as any).reducers.createLobby(code); },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  join(conn: DbConnection, code: string) { (conn as any).reducers.joinLobby(code); },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  increment(conn: DbConnection, code: string) { (conn as any).reducers.increment(code); },
 };
 
 export function subscribeLobby(code: string, onChange: (row: Lobby | null) => void): () => void {
   const conn = getConn();
   if (!conn) return () => {};
   const CODE = code.toUpperCase();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rt = conn as any;
 
   const onInsert = (_ctx: EventContext, row: Lobby) => { if (row.code.toUpperCase() === CODE) onChange(row); };
   const onUpdate = (_ctx: EventContext, _old: Lobby, row: Lobby) => { if (row.code.toUpperCase() === CODE) onChange(row); };
   const onDelete = (_ctx: EventContext, row: Lobby) => { if (row.code.toUpperCase() === CODE) onChange(null); };
 
-  conn.db.lobby.onInsert(onInsert);
-  conn.db.lobby.onUpdate(onUpdate);
-  conn.db.lobby.onDelete(onDelete);
+  rt.db.lobby.onInsert(onInsert);
+  rt.db.lobby.onUpdate(onUpdate);
+  rt.db.lobby.onDelete(onDelete);
 
-  conn
-    .subscriptionBuilder()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sub: any = conn.subscriptionBuilder();
   // some SDK versions provide onApplied; if present use it to send initial snapshot
-  // optional chaining guards if not available
-  .onApplied?.(() => {
-      const row = conn.db.lobby.code.find(CODE) || null;
+  if (typeof sub.onApplied === 'function') {
+    sub.onApplied(() => {
+      const row = rt.db.lobby.code.find(CODE) || null;
       onChange(row);
-    })
-    .subscribe([`SELECT * FROM lobby WHERE code='${CODE}'`]);
+    });
+  }
+  sub.subscribe([`SELECT * FROM lobby WHERE code='${CODE}'`]);
 
   return () => {
-    conn.db.lobby.removeOnInsert(onInsert);
-    conn.db.lobby.removeOnUpdate(onUpdate);
-    conn.db.lobby.removeOnDelete(onDelete);
+    rt.db.lobby.removeOnInsert(onInsert);
+    rt.db.lobby.removeOnUpdate(onUpdate);
+    rt.db.lobby.removeOnDelete(onDelete);
   };
 }

@@ -22,8 +22,7 @@ const CHARACTERS: Character[] = [
 type AppWindow = Window & { gameAudioContext?: AudioContext; gameGainNode?: GainNode };
 
 export const SongSelectScreen: React.FC = () => {
-  const { song, players, lobby, selectSong, selectCharacter, toggleReady, startMatch, setScreen } = useGameStore();
-  const { hostLobby, joinLobby } = useGameStore();
+  const { song, players, lobby, netConnected, netError, selectSong, selectCharacter, toggleReady, startMatch, setScreen, hostLobby, joinLobby } = useGameStore();
   const [songs, setSongs] = useState<Song[]>([]);
   const [selectedSongIndex, setSelectedSongIndex] = useState(0);
   const [selectedCharIndex, setSelectedCharIndex] = useState(0);
@@ -239,12 +238,18 @@ export const SongSelectScreen: React.FC = () => {
               <GraffitiPanel variant={lobby.code ? 'outlined' : 'default'}>
                 <div className="text-center">
                   <h3 className="text-2xl font-bold text-white mb-2">MULTIPLAYER LOBBY</h3>
+                  <div className={`text-xs mb-2 ${netConnected ? 'text-green-400' : netError ? 'text-red-400' : 'text-yellow-300'}`}>
+                    {netConnected ? 'Connected to server' : netError ? `Connection error: ${netError}` : 'Connecting to server…'}
+                  </div>
                   {lobby.code ? (
                     <>
                       <div className="text-gray-300 text-sm">ROOM CODE</div>
                       <div className="text-cyan-400 font-mono text-3xl font-black tracking-widest mb-2">{lobby.code}</div>
                       <div className={`text-sm ${lobby.connectedP2 ? 'text-green-400' : 'text-yellow-400'}`}>
                         {lobby.connectedP2 ? 'Both players connected' : 'Waiting for opponent…'}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        P1: {lobby.redPresent ? 'present' : '—'} • P2: {lobby.bluePresent ? 'present' : '—'}
                       </div>
                       <div className="mt-3">
                         <NeonButton
@@ -254,7 +259,7 @@ export const SongSelectScreen: React.FC = () => {
                       </div>
                     </>
                   ) : (
-                    <NeonButton variant="primary" onClick={hostLobby}>CREATE ROOM</NeonButton>
+                    <NeonButton variant="primary" onClick={hostLobby} disabled={!netConnected}>CREATE ROOM</NeonButton>
                   )}
                 </div>
               </GraffitiPanel>
@@ -274,10 +279,13 @@ export const SongSelectScreen: React.FC = () => {
                     />
                     <NeonButton
                       variant="secondary"
-                      disabled={joinCode.length !== 6}
+                      disabled={joinCode.length !== 6 || !netConnected}
                       onClick={() => joinLobby(joinCode)}
                     >JOIN</NeonButton>
                   </div>
+                  {!netConnected && (
+                    <div className="text-xs text-yellow-300 mt-2">Waiting for server connection…</div>
+                  )}
                 </div>
               </GraffitiPanel>
             </div>
@@ -333,12 +341,12 @@ export const SongSelectScreen: React.FC = () => {
                 </div>
               </div>
               
-              {/* Player 2 Character (if multiplayer) */}
-              {lobby.connectedP2 && (
+              {/* Player 2 Character (always shown in multiplayer with presence indicator) */}
+              {lobby.mode !== 'solo' && (
                 <div>
                   <h3 className="text-lg font-bold text-cyan-400 mb-4">PLAYER 2</h3>
                   <div className="p-3 rounded-lg border-2 border-cyan-400 bg-cyan-400/10">
-                    {players.p2.characterId ? (
+                    {lobby.connectedP2 && players.p2.characterId ? (
                       <div className="flex items-center space-x-3">
                         <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center">
                           <span className="text-xl">👤</span>
@@ -354,7 +362,7 @@ export const SongSelectScreen: React.FC = () => {
                       </div>
                     ) : (
                       <div className="text-center text-gray-400">
-                        <div className="animate-pulse">Waiting for P2...</div>
+                        <div className="animate-pulse">{lobby.connectedP2 ? 'P2 selecting…' : 'Waiting for P2 to join…'}</div>
                       </div>
                     )}
                   </div>
