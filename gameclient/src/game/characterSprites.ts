@@ -1,5 +1,5 @@
-export type CharacterPose = 'idle' | 'block' | 'uppercut' | 'hook';
-
+export type CharacterPose = 'idle' | 'jab' | 'punch' | 'hook';
+// did you know that the character sprites are actually vibe codable too?
 export interface CharacterState {
   characterId: string;
   currentPose: CharacterPose;
@@ -23,19 +23,17 @@ export class CharacterSpriteManager {
   triggerAction(player: 1 | 2, action: 'LEFT_BLOCK' | 'LEFT_UPPERCUT' | 'LEFT_HOOK' | 'RIGHT_BLOCK' | 'RIGHT_UPPERCUT' | 'RIGHT_HOOK') {
     const state = player === 1 ? this.player1State : this.player2State;
     
-    // Map incoming actions to pose names. We keep 'hook' the same.
+    // Map BLOCK to jab pose (reuse visuals), UPPERCUT to punch pose, HOOK stays hook
     if (action.includes('BLOCK')) {
-      state.currentPose = 'block';
+      state.currentPose = 'jab';
     } else if (action.includes('UPPERCUT')) {
-      state.currentPose = 'uppercut';
+      state.currentPose = 'punch';
     } else if (action.includes('HOOK')) {
       state.currentPose = 'hook';
     } else if (action.includes('JAB')) {
-      // Legacy action string
-      state.currentPose = 'block';
+      state.currentPose = 'jab';
     } else if (action.includes('PUNCH')) {
-      // Legacy action string
-      state.currentPose = 'uppercut';
+      state.currentPose = 'punch';
     }
     
     state.poseTimer = this.POSE_DURATION;
