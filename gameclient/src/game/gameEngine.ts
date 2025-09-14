@@ -32,10 +32,10 @@ export class GameEngine {
   private laneRX = 250;
   private noteIconSize = 48;
   
-  // Judgment timing windows (ms) - much tighter
-  private readonly PERFECT_WINDOW = 20;
-  private readonly GREAT_WINDOW = 40;
-  private readonly GOOD_WINDOW = 60;
+  // Judgment timing windows (ms) - more lenient
+  private readonly PERFECT_WINDOW = 80;
+  private readonly GREAT_WINDOW = 150;
+  private readonly GOOD_WINDOW = 250;
   
   // Accuracy tracking
   private totalNotes = 0;
@@ -91,6 +91,13 @@ export class GameEngine {
   private _touchOptionalCallbacks() {
     // Read optional callback so TS sees it as used
     void this.onHealthUpdate;
+  }
+  
+  // Convert the current GOOD timing window to pixels based on note speed
+  private getHitWindowPx(): number {
+    const pxFromTime = (this.GOOD_WINDOW * this.NOTE_SPEED) / 1000;
+    // Ensure a reasonable minimum tied to icon size
+    return Math.max(pxFromTime, this.noteIconSize * 2);
   }
   
   private async generateChartFromFile(songId: string, difficulty: 'expert' | 'hard' | 'normal' | 'easy' = 'expert') {
@@ -230,14 +237,15 @@ export class GameEngine {
       this.updateLayoutMetrics();
     }
     
-    // Update note positions (top to bottom)
+  // Update note positions (top to bottom)
     this.notes.forEach(note => {
       if (!note.hit) {
         const timeUntilHit = note.time - this.currentTime;
         note.y = this.hitLineY - (timeUntilHit * this.NOTE_SPEED / 1000);
         
-        // Mark as missed if too far past hit line and count it
-        if (note.y > this.hitLineY + this.noteIconSize * 2 && !note.hit) {
+    // Mark as missed if too far past hit line (beyond lenient timing window)
+    const lateWindowPx = this.getHitWindowPx();
+    if (note.y > this.hitLineY + lateWindowPx && !note.hit) {
           note.hit = true;
           this.missedHits++;
           const accuracy = this.calculateAccuracy();
@@ -348,7 +356,7 @@ export class GameEngine {
   
   handleInput(lane: 'L' | 'R', inputType: 'block' | 'uppercut' | 'hook', player: number): { judgment: Judgment | null; note: Note | null; accuracy: number } {
     // Find the closest unhit note in the specified lane that matches the input type
-    const windowPx = Math.max(60, this.noteIconSize * 1.6);
+  const windowPx = this.getHitWindowPx();
     const laneNotes = this.notes.filter(note => 
       note.lane === lane && 
       !note.hit && 
