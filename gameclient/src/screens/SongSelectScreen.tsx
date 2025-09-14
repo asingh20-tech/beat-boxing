@@ -444,14 +444,11 @@ export const SongSelectScreen: React.FC = () => {
                       {lobby.p2Ready ? '✓ READY' : '⏳ NOT READY'}
                     </div>
                     <button
-                      onClick={() => toggleReady(2)}
-                      className={`mt-2 px-4 py-2 rounded-lg font-bold transition-all ${
-                        lobby.p2Ready 
-                          ? 'bg-red-500 hover:bg-red-600 text-white' 
-                          : 'bg-green-500 hover:bg-green-600 text-white'
-                      }`}
+                      disabled
+                      className={`mt-2 px-4 py-2 rounded-lg font-bold transition-all bg-gray-600 text-white cursor-not-allowed`}
+                      title="Only Player 2 can change their own ready"
                     >
-                      {lobby.p2Ready ? 'UNREADY' : 'READY UP'}
+                      P2 CONTROLS THEIR READY
                     </button>
                   </div>
                 </div>
