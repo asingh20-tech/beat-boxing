@@ -147,7 +147,7 @@ class BodyTracker:
             for comp, entry in out:
                 idx = entry[0]
                 if comp == "POSE":
-                    # Map to enum name when possible
+                    # Map to enum name when possible est
                     try:
                         key = f"POSE:{self.mp_pose.PoseLandmark(idx).name}"
                     except Exception:
