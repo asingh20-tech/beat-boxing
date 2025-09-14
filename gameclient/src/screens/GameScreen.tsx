@@ -283,21 +283,6 @@ export const GameScreen: React.FC = () => {
         {/* Stats */}
         <div className="space-y-3 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-400">Health</span>
-            <span className={`font-bold arcade-text ${health > 50 ? 'text-green-400' : health > 25 ? 'text-yellow-400' : 'text-red-400'}`}>
-              {health}%
-            </span>
-          </div>
-          {/* Health Bar */}
-          <div className="w-full bg-gray-700 rounded-full h-2 mb-3">
-            <div 
-              className={`h-2 rounded-full transition-all duration-300 ${
-                health > 50 ? 'bg-green-400' : health > 25 ? 'bg-yellow-400' : 'bg-red-400'
-              }`}
-              style={{ width: `${health}%` }}
-            ></div>
-          </div>
-          <div className="flex justify-between">
             <span className="text-gray-400">Score</span>
             <span className="text-white font-bold arcade-text">{score.toLocaleString()}</span>
           </div>
@@ -320,8 +305,11 @@ export const GameScreen: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen brick-wall relative">
-      <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-purple-900/40 to-black/60"></div>
+    <div
+      className="min-h-screen bg-cover bg-center relative"
+      style={{ backgroundImage: "url('/images/HomeBackground.jpeg')" }}
+    >
+      <div className="absolute inset-0 bg-black/10 pointer-events-none" />
       
   {/* Multiplayer lobby controls live on the Song Select screen */}
 
