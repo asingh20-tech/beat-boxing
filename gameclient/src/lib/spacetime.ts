@@ -1,17 +1,16 @@
 // Typed SpaceTimeDB wrapper using local generated bindings
 
 import { DbConnection, type ErrorContext, type EventContext, type Lobby } from '../module_bindings';
-import type { Identity } from '@clockworklabs/spacetimedb-sdk';
 
 export type SpacetimeState = {
   conn: DbConnection | null;
-  identity: Identity | null;
+  identity: unknown | null;
   connected: boolean;
   error: string | null;
 };
 
 let currentConn: DbConnection | null = null;
-let currentIdentity: Identity | null = null;
+let currentIdentity: unknown | null = null;
 
 export async function connectSpacetime(savedToken?: string): Promise<SpacetimeState> {
   return new Promise((resolve) => {
@@ -24,12 +23,12 @@ export async function connectSpacetime(savedToken?: string): Promise<SpacetimeSt
       .withUri(uri)
       .withModuleName(moduleName)
       .withToken(savedToken)
-  .onConnect((c: DbConnection, id: Identity, token: string) => {
+  .onConnect((c: unknown, id: unknown, token: string) => {
         try { localStorage.setItem('auth_token', token); } catch { /* ignore quota/unavailable */ }
-        state.conn = c;
+  state.conn = c as DbConnection;
         state.identity = id;
         state.connected = true;
-        currentConn = c;
+  currentConn = c as DbConnection;
         currentIdentity = id;
         if (!resolved) { resolved = true; resolve(state); }
       })
@@ -59,7 +58,7 @@ export async function connectSpacetime(savedToken?: string): Promise<SpacetimeSt
 }
 
 export function getConn(): DbConnection | null { return currentConn; }
-export function getIdentity(): Identity | null { return currentIdentity; }
+export function getIdentity(): unknown | null { return currentIdentity; }
 
 export const LobbyApi = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,11 +68,15 @@ export const LobbyApi = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   increment(conn: DbConnection, code: string) { (conn as any).reducers.increment(code); },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  setCharacter(conn: DbConnection, code: string, character: string) { (conn as any).reducers.callReducer?.("set_character", undefined, undefined); (conn as any).reducers.setCharacter?.(code, character); },
+  setCharacter(conn: DbConnection, code: string, character: string) { (conn as any).reducers.setCharacter?.(code, character); },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setReady(conn: DbConnection, code: string, ready: boolean) { (conn as any).reducers.setReady?.(code, ready); },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setSong(conn: DbConnection, code: string, songId: string) { (conn as any).reducers.setSong?.(code, songId); },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  startMatch(conn: DbConnection, code: string) { (conn as any).reducers.startMatch?.(code); },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setScore(conn: DbConnection, code: string, score: number) { (conn as any).reducers.setScore?.(code, score); },
 };
 
 export function subscribeLobby(code: string, onChange: (row: Lobby | null) => void): () => void {

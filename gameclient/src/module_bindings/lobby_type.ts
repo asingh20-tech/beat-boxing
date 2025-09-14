@@ -29,6 +29,9 @@ export type Lobby = {
   red_ready: boolean,
   blue_ready: boolean,
   song_id: string | undefined,
+  started: boolean,
+  red_score: number,
+  blue_score: number,
 };
 
 export namespace Lobby {
@@ -45,6 +48,9 @@ export namespace Lobby {
   new ProductTypeElement("red_ready", AlgebraicType.createBoolType()),
   new ProductTypeElement("blue_ready", AlgebraicType.createBoolType()),
   new ProductTypeElement("song_id", AlgebraicType.createOptionType(AlgebraicType.createStringType())),
+  new ProductTypeElement("started", AlgebraicType.createBoolType()),
+  new ProductTypeElement("red_score", AlgebraicType.createU32Type()),
+  new ProductTypeElement("blue_score", AlgebraicType.createU32Type()),
     ]);
   }
 

@@ -167,7 +167,8 @@ export const SongSelectScreen: React.FC = () => {
           if (focusMode === 'song' || focusMode === 'character') {
             if (lobby.mode !== 'solo') {
               playSelectSfx();
-              toggleReady(1);
+              // Ready up the local player (red -> P1, blue -> P2)
+              toggleReady(lobby.side !== 'blue' ? 1 : 2);
             } else if (canStart()) {
               playSelectSfx();
               startMatch();
@@ -182,7 +183,8 @@ export const SongSelectScreen: React.FC = () => {
           event.preventDefault();
           if (lobby.mode !== 'solo') {
             playSelectSfx();
-            toggleReady(1);
+            // Ready up the local player (red -> P1, blue -> P2)
+            toggleReady(lobby.side !== 'blue' ? 1 : 2);
           }
           break;
         }
@@ -196,7 +198,7 @@ export const SongSelectScreen: React.FC = () => {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedSongIndex, selectedCharIndex, focusMode, selectSong, selectCharacter, startMatch, setScreen, songs, lobby.mode, toggleReady, canStart, playPreview]);
+  }, [selectedSongIndex, selectedCharIndex, focusMode, selectSong, selectCharacter, startMatch, setScreen, songs, lobby.mode, lobby.side, toggleReady, canStart, playPreview]);
 
   const getDifficultyColor = (difficulty: Song['difficulty']) => {
     switch (difficulty) {
