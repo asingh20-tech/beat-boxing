@@ -35,6 +35,8 @@ export const SongSelectScreen: React.FC = () => {
   const [previewAudio, setPreviewAudio] = useState<HTMLAudioElement | null>(null);
   const currentSongRef = useRef<string>('');
   const [joinCode, setJoinCode] = useState('');
+  const containerRef = useRef<HTMLDivElement | null>(null);
+const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   const playPreview = useCallback((songItem: Song) => {
     if (previewAudio && currentSongRef.current !== songItem.id) {

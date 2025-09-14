@@ -1,47 +1,53 @@
 import React from 'react';
-import { NeonButton } from '../components/ui/NeonButton';
-import { GraffitiPanel } from '../components/ui/GraffitiPanel';
 import { useGameStore } from '../store/gameStore';
 
 export const SettingsScreen: React.FC = () => {
   const { settings, updateSettings, setScreen } = useGameStore();
-  
+
   const handleVolumeChange = (volume: number) => {
     updateSettings({ volume });
-    // Apply volume immediately to audio context if it exists
-  type W = Window & { gameAudioContext?: AudioContext, gameGainNode?: { gain: { value: number } } };
-  const w = window as W;
-  const gainNode = w.gameGainNode;
-    if (gainNode) {
-      gainNode.gain.value = volume;
-    }
+    // Apply volume immediately to shared gain node
+    type W = Window & { gameAudioContext?: AudioContext, gameGainNode?: { gain: { value: number } } };
+    const w = window as W;
+    const gainNode = w.gameGainNode;
+    if (gainNode) gainNode.gain.value = volume;
   };
 
+  // ESC -> back to menu
   React.useEffect(() => {
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      setScreen('TITLE');
-    }
-  };
-  document.addEventListener('keydown', handleKeyDown);
-  return () => document.removeEventListener('keydown', handleKeyDown);
-}, [setScreen]);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setScreen('HOME');
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [setScreen]);
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center p-8 relative"
-      style={{ backgroundImage: "url('/images/HomeBackground.jpeg')" }}
+      className="min-h-screen bg-center bg-no-repeat bg-[length:100%_100%] p-8 relative"
+      style={{ backgroundImage: "url('/images/silly.png')" }}
     >
-      <div className="max-w-2xl mx-auto">
-        {/* Settings Panel */}
-        <GraffitiPanel className="mb-8">
-          <div className="space-y-8">
-            {/* Master Volume */}
-            <div>
-              <h3 className="text-2xl font-bold text-white mb-4 arcade-text">MASTER VOLUME</h3>
-              <div className="space-y-4">
+      {/* Centered Box container */}
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <div className="relative w-full max-w-[900px]">
+          {/* Your custom box image */}
+          <img
+            src="/images/Box.png"
+            alt="Settings Panel"
+            className="w-full h-[400px] object-fill select-none pointer-events-none"
+            draggable={false}
+          />
+
+          {/* Overlayed content */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-full max-w-[700px] px-8">
+              <h3 className="text-3xl font-black text-white text-center mb-6 arcade-text">
+                MASTER VOLUME
+              </h3>
+
+              <div className="space-y-5">
                 <div className="flex items-center space-x-4">
-                  <span className="text-gray-300 w-12">0%</span>
+                  <span className="text-gray-200 w-12 text-sm text-right">0%</span>
                   <div className="flex-1 relative">
                     <input
                       aria-label="Master Volume"
@@ -57,19 +63,25 @@ export const SettingsScreen: React.FC = () => {
                       }}
                     />
                   </div>
-                  <span className="text-gray-300 w-12">100%</span>
+                  <span className="text-gray-200 w-12 text-sm">100%</span>
                 </div>
+
                 <div className="text-center">
-                  <span className="text-cyan-400 font-bold text-xl arcade-text">
+                  <span className="text-cyan-300 font-bold text-2xl arcade-text">
                     {Math.round(settings.volume * 100)}%
                   </span>
+                </div>
+
+                <div className="text-center text-xs text-black-300 opacity-80">
+                  Press <span className="font-bold">ESC</span> to return to Menu
                 </div>
               </div>
             </div>
           </div>
-        </GraffitiPanel>
+        </div>
       </div>
-      
+
+      {/* Slider styling */}
       <style>{`
         /* Reset default look */
         .slider { -webkit-appearance: none; appearance: none; outline: none; }

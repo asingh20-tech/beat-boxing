@@ -11,7 +11,7 @@ export const HowToPlayScreen: React.FC = () => {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setScreen('TITLE');
+        setScreen('HOME');
       }
     };
     document.addEventListener('keydown', onKeyDown);
@@ -69,8 +69,8 @@ export const HowToPlayScreen: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center p-8 relative"
-      style={{ backgroundImage: "url('/images/HomeBackground.jpeg')" }}
+      className="min-h-screen bg-center bg-no-repeat bg-[length:100%_100%] p-8 relative"
+      style={{ backgroundImage: "url('/images/silly.png')" }}
     >
       <div className="max-w-4xl mx-auto">
         {/* Grid of instructional boxes */}
