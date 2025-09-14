@@ -60,7 +60,7 @@ export const HomeScreen: React.FC = () => {
           break;
       }
     };
-
+//comment
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedIndex, menuItems]);
