@@ -1,5 +1,11 @@
 [
   {
+    "id": "NotLikeUs",
+    "title": "BeatBox Special",
+    "bpm": 210,
+    "difficulty": "Medium"
+  },
+  {
     "id": "ToosieSlide",
     "title": "Toosie Slide - Drake",
     "bpm": 210,
