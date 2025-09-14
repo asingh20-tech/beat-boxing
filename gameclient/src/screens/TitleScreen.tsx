@@ -54,7 +54,16 @@ export const TitleScreen: React.FC = () => {
   }, [setScreen]);
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center relative overflow-hidden">
+    <div
+      className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
+      style={{
+        backgroundImage: "url('/images/gradient-boxing-ring-background_23-2150742156.avif')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundColor: "rgba(0,0,0,0.3)",   // darkness overlay
+        backgroundBlendMode: "darken",        // or "multiply" for stronger effect
+      }}
+    >
       {/* Left Character (Boxer) */}
       <img
         src={leftPunching ? '/images/characters/boxer-punch.png' : '/images/characters/boxer.png'}
