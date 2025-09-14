@@ -51,6 +51,10 @@ import { SetReady } from "./set_ready_reducer.ts";
 export { SetReady };
 import { SetSong } from "./set_song_reducer.ts";
 export { SetSong };
+import { StartMatch } from "./start_match_reducer.ts";
+export { StartMatch };
+import { SetScore } from "./set_score_reducer.ts";
+export { SetScore };
 
 // Import and reexport all table handle types
 import { LobbyTableHandle } from "./lobby_table.ts";
@@ -118,6 +122,14 @@ const REMOTE_MODULE = {
       reducerName: "set_song",
       argsType: SetSong.getTypeScriptAlgebraicType(),
     },
+    start_match: {
+      reducerName: "start_match",
+      argsType: StartMatch.getTypeScriptAlgebraicType(),
+    },
+    set_score: {
+      reducerName: "set_score",
+      argsType: SetScore.getTypeScriptAlgebraicType(),
+    },
   },
   versionInfo: {
     cliVersion: "1.3.2",
@@ -148,6 +160,8 @@ export type Reducer = never
 | { name: "SetCharacter", args: SetCharacter }
 | { name: "SetReady", args: SetReady }
 | { name: "SetSong", args: SetSong }
+| { name: "StartMatch", args: StartMatch }
+| { name: "SetScore", args: SetScore }
 ;
 
 export class RemoteReducers {
@@ -265,6 +279,38 @@ export class RemoteReducers {
     this.connection.offReducer("set_song", callback);
   }
 
+  startMatch(code: string) {
+    const __args = { code };
+    let __writer = new BinaryWriter(1024);
+    StartMatch.getTypeScriptAlgebraicType().serialize(__writer, __args);
+    let __argsBuffer = __writer.getBuffer();
+    this.connection.callReducer("start_match", __argsBuffer, this.setCallReducerFlags.startMatchFlags);
+  }
+
+  onStartMatch(callback: (ctx: ReducerEventContext, code: string) => void) {
+    this.connection.onReducer("start_match", callback);
+  }
+
+  removeOnStartMatch(callback: (ctx: ReducerEventContext, code: string) => void) {
+    this.connection.offReducer("start_match", callback);
+  }
+
+  setScore(code: string, score: number) {
+    const __args = { code, score };
+    let __writer = new BinaryWriter(1024);
+    SetScore.getTypeScriptAlgebraicType().serialize(__writer, __args);
+    let __argsBuffer = __writer.getBuffer();
+    this.connection.callReducer("set_score", __argsBuffer, this.setCallReducerFlags.setScoreFlags);
+  }
+
+  onSetScore(callback: (ctx: ReducerEventContext, code: string, score: number) => void) {
+    this.connection.onReducer("set_score", callback);
+  }
+
+  removeOnSetScore(callback: (ctx: ReducerEventContext, code: string, score: number) => void) {
+    this.connection.offReducer("set_score", callback);
+  }
+
 }
 
 export class SetReducerFlags {
@@ -288,6 +334,10 @@ export class SetReducerFlags {
   setReady(flags: CallReducerFlags) { this.setReadyFlags = flags; }
   setSongFlags: CallReducerFlags = 'FullUpdate';
   setSong(flags: CallReducerFlags) { this.setSongFlags = flags; }
+  startMatchFlags: CallReducerFlags = 'FullUpdate';
+  startMatch(flags: CallReducerFlags) { this.startMatchFlags = flags; }
+  setScoreFlags: CallReducerFlags = 'FullUpdate';
+  setScore(flags: CallReducerFlags) { this.setScoreFlags = flags; }
 
 }
 
